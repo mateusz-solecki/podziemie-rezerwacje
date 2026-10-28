@@ -666,17 +666,47 @@
         }
     </script>
 
+    <script type="text/javascript">
+    var pzUserGroups = {$UserGroupIdsJson|default:'[]'};
+    var pzIsAdmin = {if $PzIsAdmin|default:false}true{else}false{/if};
+</script>
+
     {literal}
 <script type="text/javascript">
 $(document).ready(function() {
+    // REGUŁY: ID grupy -> { selektor atrybutu: [dozwolone wartości] }
+    // Grupa bez reguły dla danego pola widzi wszystkie wartości.
+    var groupRules = {
+        //2 - trenerzy
+        //2: { '#psiattribute1': ['TP1', 'TP2', 'Trening samodzielny'],
+        //     '#psiattribute4': ['TP1', 'Trening samodzielny'] },
+
+        //3 - klienci
+        3: { '#psiattribute1': ['Trening samodzielny'],
+             '#psiattribute4': ['Trening samodzielny'] },
+
+             //4 - fizjo
+        4: { '#psiattribute1': ['Trening samodzielny'],
+             '#psiattribute4': ['Trening samodzielny'] },
+    };
+
+    function allowedForUser(selector) {
+        if (pzIsAdmin) return null;
+        var union = null;
+        pzUserGroups.forEach(function(gid) {
+            var rule = groupRules[gid] && groupRules[gid][selector];
+            if (rule) union = (union || []).concat(rule);
+        });
+        return union; // null = bez ograniczeń
+    }
+
     var attributeMap = {
         '#psiattribute1': {
             accessory: '#accessory1',
             mapping: {
-                'TP1': 2,
-                'TP2': 3,
-                'TP3': 4,
+                'TP1': 2, 'TP2': 3, 'TP3': 4,
                 'Trening bokserski': 3,
+                'Trening indywidualny': 1,
                 'Trening samodzielny': 1,
                 'Cała sala': 5
             }
@@ -684,15 +714,13 @@ $(document).ready(function() {
         '#psiattribute4': {
             accessory: '#accessory9',
             mapping: {
-                'TP1': 2,
-                'TP2': 3,
-                'TP3': 4,
+                'TP1': 2, 'TP2': 3, 'TP3': 4,
+                'Trening indywidualny': 1,
                 'Trening samodzielny': 1
             }
         }
     };
 
-    // Pola zamieniane na przyciski (null = wszystkie opcje)
     var buttonFields = {
         '#psiattribute1': attributeMap['#psiattribute1'].mapping,
         '#psiattribute3': null,
@@ -706,6 +734,7 @@ $(document).ready(function() {
         $select.data('converted', true);
         $select.hide();
 
+        var groupAllowed = allowedForUser(selector);
         var $buttonGroup = $('<div class="custom-attr-buttons d-flex flex-wrap gap-2 mt-1"></div>');
 
         $select.find('option').each(function() {
@@ -713,6 +742,12 @@ $(document).ready(function() {
             var text = $(this).text();
 
             if (val === "" || (allowed && allowed[val] === undefined)) return;
+
+            // wartość niedozwolona dla grupy: usuwamy, chyba że jest już wybrana (edycja)
+            if (groupAllowed && groupAllowed.indexOf(val) < 0 && $select.val() !== val) {
+                $(this).remove();
+                return;
+            }
 
             var isSelected = ($select.val() === val) ? 'active btn-primary' : 'btn-outline-secondary';
             var $btn = $('<button type="button" class="btn btn-sm ' + isSelected + '"></button>')
@@ -733,14 +768,12 @@ $(document).ready(function() {
         $select.after($buttonGroup);
     }
 
-    // Sprawdzamy stale: atrybuty mogą być przerysowane po zmianie daty/zasobu
     setInterval(function() {
         $.each(buttonFields, function(selector, allowed) {
             initButtons(selector, allowed);
         });
     }, 200);
 
-    // Ilość akcesoriów po zmianie wartości
     $(document).on('change', '#psiattribute1, #psiattribute4', function() {
         var selector = '#' + $(this).attr('id');
         var config = attributeMap[selector];
@@ -752,7 +785,6 @@ $(document).ready(function() {
 
             if ($input.length) {
                 $input.val(ilosc).trigger('input').trigger('change').trigger('blur');
-
                 setTimeout(function() {
                     $('#btnConfirmAddAccessories').trigger('click');
                 }, 150);
@@ -760,7 +792,6 @@ $(document).ready(function() {
         }
     });
 
-    // Urządzenia (jeden wybór)
     $(document).on('change', '#psiattribute3', function() {
         var wybraneUrzadzenie = $(this).val();
         var accessoryId = null;
@@ -776,10 +807,8 @@ $(document).ready(function() {
 
         if (accessoryId) {
             var $checkbox = $('#accessory' + accessoryId);
-
             if ($checkbox.length) {
                 $checkbox.prop('checked', true).trigger('input').trigger('change').trigger('blur');
-
                 setTimeout(function() {
                     $('#btnConfirmAddAccessories').trigger('click');
                 }, 150);
@@ -787,17 +816,13 @@ $(document).ready(function() {
         }
     });
 
-    // Blokada wysyłki bez wybranego sprzętu/akcesorium
     var form = document.querySelector('#form-reservation');
     if (form) {
         form.addEventListener('submit', function(e) {
             var isAnySelected = false;
             document.querySelectorAll('.customAttribute').forEach(function(select) {
-                if (select.value && select.value.trim() !== '') {
-                    isAnySelected = true;
-                }
+                if (select.value && select.value.trim() !== '') isAnySelected = true;
             });
-
             if (!isAnySelected) {
                 e.preventDefault();
                 alert('Musisz wybrać co najmniej jedno sprzęt/akcesorium!');
