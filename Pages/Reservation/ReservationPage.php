@@ -240,6 +240,12 @@ abstract class ReservationPage extends Page implements IReservationPage
 
         $this->Set('CreditsEnabled', $config->GetKey(ConfigKeys::CREDITS_ENABLED, new BooleanConverter()));
 
+        $pzSession = $this->server->GetUserSession();
+        $pzGroupIds = array_values(array_map('intval', (array)($pzSession->Groups ?? [])));
+        $this->Set('UserGroupIdsJson', json_encode($pzGroupIds));
+        $this->Set('PzIsAdmin', (bool)($pzSession->IsAdmin ?? false));
+
+
         if ($this->IsUnavailable()) {
             $this->RedirectToError(ErrorMessages::RESERVATION_NOT_AVAILABLE);
             return;
