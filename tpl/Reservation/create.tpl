@@ -55,10 +55,10 @@
                 {assign var="detailsCol" value="col-12 col-sm-6"}
                 {/if}
 
-                <div class="form-group {$detailsCol} py-2 border-bottom" style="display:none">
+                <div class="form-group {$detailsCol} py-2 border-bottom">
                     <label class="fw-bold" for="userName">{translate key='Owner'}</label>
                     {if $ShowUserDetails && $ShowReservationDetails}
-                    <a href="#" id="userName" data-userid="{$UserId}" class="link-primary">{$ReservationUserName|escape:'html':'UTF-8':false}</a>
+                    <a href="#" id="userName" data-userid="{$UserId}" class="link-primary">{$ReservationUserName}</a>
                     {else}
                     {translate key=Private}
                     {/if}
@@ -585,11 +585,11 @@
         reminders.init();
 
         {foreach from=$Participants item=user}
-        reservation.addParticipant("{$user->FullName|unescape:'html'|escape:'javascript'}", "{$user->UserId|escape:'javascript'}");
+        reservation.addParticipant("{$user->FullName|escape:'javascript'}", "{$user->UserId|escape:'javascript'}");
         {/foreach}
 
         {foreach from=$Invitees item=user}
-        reservation.addInvitee("{$user->FullName|unescape:'html'|escape:'javascript'}", '{$user->UserId}');
+        reservation.addInvitee("{$user->FullName|escape:'javascript'}", '{$user->UserId}');
         {/foreach}
 
         {foreach from=$ParticipatingGuests item=guest}
