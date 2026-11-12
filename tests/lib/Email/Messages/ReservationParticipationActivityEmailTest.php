@@ -16,10 +16,12 @@ class ReservationParticipationActivityEmailTest extends TestBase
         $resource = new FakeBookableResource(1, 'Room');
         $resource->SetScheduleId(1);
 
-        $series = (new ExistingReservationSeriesBuilder())
-            ->WithPrimaryResource($resource)
-            ->WithCurrentInstance(new TestReservation())
-            ->Build();
+        $series = new TestReservationSeries();
+        $series->WithOwnerId(1);
+        $series->WithResource($resource);
+        $series->WithTitle('Title');
+        $series->WithDescription('Description');
+        $series->WithCurrentInstance(new TestReservation());
 
         $participantDetails = '<a href="https://evil.example">Verify</a> O\'Brien';
         $message = new ReservationParticipationActivityEmail($series, InvitationAction::Accept, $owner, $participantDetails);

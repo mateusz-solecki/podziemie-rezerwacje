@@ -80,6 +80,11 @@ class ManageResourcesPresenter extends ActionPresenter
     private $attributeService;
 
     /**
+     * @var IUserPreferenceRepository
+     */
+    private $userPreferenceRepository;
+
+    /**
      * @var IReservationViewRepository
      */
     private $reservationViewRepository;
@@ -91,6 +96,7 @@ class ManageResourcesPresenter extends ActionPresenter
         IImageFactory $imageFactory,
         IGroupViewRepository $groupRepository,
         IAttributeService $attributeService,
+        IUserPreferenceRepository $userPreferenceRepository,
         IReservationViewRepository $reservationViewRepository
     ) {
         parent::__construct($page);
@@ -101,6 +107,7 @@ class ManageResourcesPresenter extends ActionPresenter
         $this->imageFactory = $imageFactory;
         $this->groupRepository = $groupRepository;
         $this->attributeService = $attributeService;
+        $this->userPreferenceRepository = $userPreferenceRepository;
         $this->reservationViewRepository = $reservationViewRepository;
 
         $this->AddAction(ManageResourcesActions::ActionAdd, 'Add');
@@ -138,7 +145,7 @@ class ManageResourcesPresenter extends ActionPresenter
 
     public function PageLoad()
     {
-        $this->LoadResources(pageNumber: $this->page->GetPageNumber(), pageSize: $this->page->GetPageSize());
+        $this->LoadResources(pageNumber: $this->page->GetPageNumber(), pageSize: null);
     }
 
     /**
@@ -499,7 +506,7 @@ class ManageResourcesPresenter extends ActionPresenter
 
     public function ChangeSchedule()
     {
-        $scheduleId = $this->page->GetIntValue();
+        $scheduleId = $this->page->GetValue();
         if (!empty($scheduleId)) {
             $resourceId = $this->page->GetResourceId();
             Log::Debug('Changing schedule for resource %s', $resourceId);
@@ -516,7 +523,7 @@ class ManageResourcesPresenter extends ActionPresenter
         Log::Debug('Changing resource admin for resource %s', $resourceId);
 
         $resource = $this->resourceRepository->LoadById($resourceId);
-        $adminGroupId = $this->page->GetIntValue();
+        $adminGroupId = $this->page->GetValue();
         $resource->SetAdminGroupId($adminGroupId);
         $this->resourceRepository->Update($resource);
     }
@@ -573,7 +580,7 @@ class ManageResourcesPresenter extends ActionPresenter
     public function ChangeSortOrder()
     {
         $resourceId = $this->page->GetResourceId();
-        $sortOrder = $this->page->GetIntValue();
+        $sortOrder = $this->page->GetValue();
         Log::Debug('Changing sort order for resource %s', $resourceId);
 
         $resource = $this->resourceRepository->LoadById($resourceId);
@@ -583,7 +590,7 @@ class ManageResourcesPresenter extends ActionPresenter
 
     public function ChangeResourceType()
     {
-        $resourceTypeId = $this->page->GetIntValue();
+        $resourceTypeId = $this->page->GetValue();
         $resourceId = $this->page->GetResourceId();
         Log::Debug('Changing resource type for resource %s', $resourceId);
         $resource = $this->resourceRepository->LoadById($resourceId);
@@ -756,19 +763,16 @@ class ManageResourcesPresenter extends ActionPresenter
                     $resource->SetMaxNotice(null);
                 }
                 if ($this->ChangingDropDown($allowMultiDay)) {
-                    $resource->SetAllowMultiday(value: $allowMultiDay === 1);
+                    $resource->SetAllowMultiday($allowMultiDay);
                 }
                 if ($this->ChangingDropDown($requiresApproval)) {
-                    $resource->SetRequiresApproval(value: $requiresApproval === 1);
+                    $resource->SetRequiresApproval($requiresApproval);
                 }
                 if ($this->ChangingDropDown($autoAssign)) {
-                    $resource->SetAutoAssign(value: $autoAssign === 1);
+                    $resource->SetAutoAssign($autoAssign);
                 }
                 if ($this->ChangingDropDown($enableCheckin)) {
-                    $resource->SetCheckin(
-                        enabled: $enableCheckin === 1,
-                        autoReleaseMinutes: $this->page->GetAutoReleaseMinutes()
-                    );
+                    $resource->SetCheckin($enableCheckin, $this->page->GetAutoReleaseMinutes());
                 }
                 if ($this->ChangingDropDown($allowSubscription)) {
                     if ($allowSubscription) {
@@ -777,18 +781,17 @@ class ManageResourcesPresenter extends ActionPresenter
                         $resource->DisableSubscription();
                     }
                 }
-                // A blank field (null) leaves credits unchanged; an explicit 0 applies.
-                if ($credits !== null) {
+                if (!empty($credits)) {
                     $resource->SetCreditsPerSlot($credits);
                 }
-                if ($peakCredits !== null) {
+                if (!empty($peakCredits)) {
                     $resource->SetPeakCreditsPerSlot($peakCredits);
                 }
 
                 if ($unlimitedCapacity) {
                     $resource->SetMaxParticipants(null);
                 }
-                if (!$unlimitedCapacity && $maxCapacity !== null) {
+                if (!$unlimitedCapacity && $maxCapacity != '') {
                     $resource->SetMaxParticipants($maxCapacity);
                 }
 

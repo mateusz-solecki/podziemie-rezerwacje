@@ -213,7 +213,7 @@ class ManageReservationsPresenter extends ActionPresenter
 
         $reservations = $this->manageReservationsService->LoadFiltered(
             pageNumber: $isCsv ? null : $this->page->GetPageNumber(),
-            pageSize: $isCsv ? null : $this->page->GetPageSize(),
+            pageSize: null,
             sortField: $this->page->GetSortField(),
             sortDirection: $this->page->GetSortDirection(),
             filter: $filter,
@@ -353,8 +353,7 @@ class ManageReservationsPresenter extends ActionPresenter
                         'text' => $terms->Text(),
                         'url' => $terms->Url(),
                         'filename' => $terms->FileName(),
-                        'applicability' => $terms->Applicability()
-                    ]
+                        'applicability' => $terms->Applicability()]
                 );
             } else {
                 $this->page->BindTerms(null);
@@ -750,8 +749,7 @@ class ReservationFilterPreferences
         $this->FilterCustomAttributes = serialize($filters);
     }
 
-    public static $filterKeys = [
-        'FilterStartDateDelta' => -7,
+    public static $filterKeys = ['FilterStartDateDelta' => -7,
         'FilterEndDateDelta' => +7,
         'FilterUserId' => '',
         'FilterUserName' => '',

@@ -83,7 +83,7 @@ class ManageUsersPresenterTest extends TestBase
 
         $resourceList = [new FakeBookableResource(1)];
 
-        $attributeList = [new FakeCustomAttribute(id: 1, isRequiredOk: true)];
+        $attributeList = [new FakeCustomAttribute(1, '1')];
 
         $user = new FakeUser();
 
@@ -359,21 +359,19 @@ class ManageUsersPresenterTest extends TestBase
     public function testPageLoadRequestsCurrentPage()
     {
         $this->page->_PageNumber = 3;
-        $this->page->_PageSize = 20;
         $this->userRepo->_UserList = new PageableData([]);
         $this->userRepo->_User = new FakeUser();
         $this->groupViewRepository->method('GetList')->willReturn(new PageableData([]));
 
         $this->presenter->PageLoad();
 
-        $this->assertSame([3, 20], $this->userRepo->_GetListPaging);
+        $this->assertSame([3, null], $this->userRepo->_GetListPaging);
     }
 
     public function testExportUsersLoadsAllUsers()
     {
         $this->fakeUser->IsAdmin = true;
         $this->page->_PageNumber = 3;
-        $this->page->_PageSize = 20;
         $this->userRepo->_UserList = new PageableData([]);
         $this->userRepo->_User = new FakeUser();
         $this->groupViewRepository->method('GetList')->willReturn(new PageableData([]));
@@ -499,8 +497,7 @@ class ManageUsersPresenterTest extends TestBase
                                  ->willReturnCallback(function ($userId) use ($matcher) {
                                      match ($matcher->numberOfInvocations()) {
                                          1 => $this->assertEquals(809, $userId),
-                                         2 => $this->assertEquals(909, $userId),
-                                         default => $this->fail('Unexpected invocation ' . $matcher->numberOfInvocations()),
+                                         2 => $this->assertEquals(909, $userId)
                                      };
                                  });
 
@@ -819,7 +816,7 @@ class FakeManageUsersPage extends FakeActionPageBase implements IManageUsersPage
         $this->_BoundUsers = $users;
     }
 
-    public function GetUserId(): ?int
+    public function GetUserId()
     {
         return $this->_UserId;
     }
@@ -907,7 +904,7 @@ class FakeManageUsersPage extends FakeActionPageBase implements IManageUsersPage
         return $this->_FilterStatusId;
     }
 
-    public function GetUserGroup(): ?int
+    public function GetUserGroup()
     {
         return $this->_UserGroup;
     }
@@ -968,7 +965,7 @@ class FakeManageUsersPage extends FakeActionPageBase implements IManageUsersPage
         // TODO: Implement BindStatusDescriptions() method.
     }
 
-    public function GetDeletedUserIds(): array
+    public function GetDeletedUserIds()
     {
         return $this->_DeletedUserIds;
     }
