@@ -71,21 +71,15 @@ interface IManagePaymentsPage extends IActionPage
     public function SetPayPalSettings($enabled, $clientId, $secret, $environment);
 
     /**
-     * @param string $enabled
+     * @param bool $enabled
      * @param string $publishableKey
      * @param string $secretKey
      */
     public function SetStripeSettings($enabled, $publishableKey, $secretKey);
 
-    /**
-     * @return string
-     */
-    public function GetPageNumber();
+    public function GetPageNumber(): int;
 
-    /**
-     * @return string
-     */
-    public function GetPageSize();
+    public function GetPageSize(): int;
 
     /**
      * @param PageableData|TransactionLogView[] $transactionLog
@@ -113,7 +107,7 @@ interface IManagePaymentsPage extends IActionPage
     public function BindTransactionLogView(TransactionLogView $transactionLogView);
 
     /**
-     * @param int $wasIssued
+     * @param bool $wasIssued
      */
     public function BindRefundIssued($wasIssued);
 }
@@ -234,12 +228,12 @@ class ManagePaymentsPage extends ActionPage implements IManagePaymentsPage
         $this->Display('Admin/Payments/transaction_log.tpl');
     }
 
-    public function GetPageNumber()
+    public function GetPageNumber(): int
     {
         return $this->pageable->GetPageNumber();
     }
 
-    public function GetPageSize()
+    public function GetPageSize(): int
     {
         return $this->pageable->GetPageSize();
     }

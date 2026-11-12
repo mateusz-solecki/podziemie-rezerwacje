@@ -34,7 +34,15 @@ class SchedulePeriodRuleTest extends TestBase
         $resource = new FakeBookableResource(1);
         $resource->SetScheduleId($scheduleId);
 
-        $series = ReservationSeries::Create(1, $resource, null, null, $dates, new RepeatNone(), $this->fakeUser);
+        $series = ReservationSeries::Create(
+            userId: 1,
+            resource: $resource,
+            title: '',
+            description: '',
+            reservationDate: $dates,
+            repeatOptions: new RepeatNone(),
+            bookedBy: $this->fakeUser
+        );
 
         $this->scheduleRepository
                 ->expects($this->once())
@@ -64,7 +72,15 @@ class SchedulePeriodRuleTest extends TestBase
         $resource = new FakeBookableResource(1);
         $resource->SetScheduleId($scheduleId);
 
-        $series = ReservationSeries::Create(1, $resource, null, null, $dates, new RepeatNone(), $this->fakeUser);
+        $series = ReservationSeries::Create(
+            userId: 1,
+            resource: $resource,
+            title: '',
+            description: '',
+            reservationDate: $dates,
+            repeatOptions: new RepeatNone(),
+            bookedBy: $this->fakeUser
+        );
 
         $this->scheduleRepository
                 ->expects($this->once())
@@ -80,15 +96,16 @@ class SchedulePeriodRuleTest extends TestBase
                 ->expects($matcher)
                 ->method('GetPeriod')
                 ->willReturnCallback(function (Date $d) use ($matcher, $series, $date) {
-                    match ($matcher->numberOfInvocations()) {
+                    $invocation = $matcher->numberOfInvocations();
+                    match ($invocation) {
                         1 => $this->assertEquals($d, $series->CurrentInstance()->StartDate()),
-                        2 => $this->assertEquals($d, $series->CurrentInstance()->EndDate())
+                        2 => $this->assertEquals($d, $series->CurrentInstance()->EndDate()),
+                        default => $this->fail('Unexpected invocation ' . $invocation),
                     };
 
-                    return match ($matcher->numberOfInvocations()) {
-                        1 => new SchedulePeriod($date, $date),
-                        2 => new SchedulePeriod($date->AddMinutes(1), $date->AddMinutes(1))
-                    };
+                    return $invocation === 1
+                        ? new SchedulePeriod($date, $date)
+                        : new SchedulePeriod($date->AddMinutes(1), $date->AddMinutes(1));
                 });
 
         $result = $this->rule->Validate($series, null);
@@ -104,7 +121,15 @@ class SchedulePeriodRuleTest extends TestBase
         $resource = new FakeBookableResource(1);
         $resource->SetScheduleId($scheduleId);
 
-        $series = ReservationSeries::Create(1, $resource, null, null, $dates, new RepeatNone(), $this->fakeUser);
+        $series = ReservationSeries::Create(
+            userId: 1,
+            resource: $resource,
+            title: '',
+            description: '',
+            reservationDate: $dates,
+            repeatOptions: new RepeatNone(),
+            bookedBy: $this->fakeUser
+        );
 
         $this->scheduleRepository
                 ->expects($this->once())

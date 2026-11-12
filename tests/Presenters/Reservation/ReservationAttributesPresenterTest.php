@@ -67,10 +67,10 @@ class ReservationAttributesPresenterTest extends TestBase
 
         $attributeWithoutSecondaryEntity = new FakeCustomAttribute(1);
         $attributeWithSecondaryEntityOfRequestedUser = new FakeCustomAttribute(2);
-        $attributeWithSecondaryEntityOfRequestedUser->WithSecondaryEntities(CustomAttributeCategory::USER, $requestedUserId);
+        $attributeWithSecondaryEntityOfRequestedUser->WithSecondaryEntities(CustomAttributeCategory::USER, [$requestedUserId]);
 
         $attributeWithSecondaryEntityOfAnotherUser = new FakeCustomAttribute(3);
-        $attributeWithSecondaryEntityOfAnotherUser->WithSecondaryEntities(CustomAttributeCategory::USER, 1212);
+        $attributeWithSecondaryEntityOfAnotherUser->WithSecondaryEntities(CustomAttributeCategory::USER, [1212]);
 
         $attributes = [
             $attributeWithoutSecondaryEntity,
@@ -100,7 +100,7 @@ class ReservationAttributesPresenterTest extends TestBase
 
         $attributeWithoutSecondaryEntity = new FakeCustomAttribute(1);
         $attributeWithSecondaryEntityOfRequestedUser = new FakeCustomAttribute(2);
-        $attributeWithSecondaryEntityOfRequestedUser->WithSecondaryEntities(CustomAttributeCategory::USER, $requestedUserId);
+        $attributeWithSecondaryEntityOfRequestedUser->WithSecondaryEntities(CustomAttributeCategory::USER, [$requestedUserId]);
 
         $attributes = [
             $attributeWithoutSecondaryEntity,
@@ -235,11 +235,10 @@ class FakeReservationAttributesPage implements IReservationAttributesPage
     }
 
     /**
-     * @param Attribute[] $attributes
+     * @param LBAttribute[] $attributes
      */
     public function SetAttributes($attributes)
     {
-        /** @var LBAttribute[] $attributes */
         $this->_Attributes = $attributes;
     }
 

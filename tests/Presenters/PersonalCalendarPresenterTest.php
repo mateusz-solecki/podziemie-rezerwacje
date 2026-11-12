@@ -16,8 +16,6 @@ class PersonalCalendarPresenterTest extends TestBase
 
     private IReservationViewRepository&\PHPUnit\Framework\MockObject\MockObject $repository;
 
-    private ICalendarFactory&\PHPUnit\Framework\MockObject\MockObject $calendarFactory;
-
     private ICalendarSubscriptionService&\PHPUnit\Framework\MockObject\MockObject $subscriptionService;
 
     private IUserRepository&\PHPUnit\Framework\MockObject\MockObject $userRepository;
@@ -32,7 +30,6 @@ class PersonalCalendarPresenterTest extends TestBase
 
         $this->page = $this->createMock('ICommonCalendarPage');
         $this->repository = $this->createMock('IReservationViewRepository');
-        $this->calendarFactory = $this->createMock('ICalendarFactory');
         $this->subscriptionService = $this->createMock('ICalendarSubscriptionService');
         $this->userRepository = $this->createMock('IUserRepository');
         $this->resourceService = $this->createMock('IResourceService');
@@ -63,8 +60,8 @@ class PersonalCalendarPresenterTest extends TestBase
         $resourceName = 'rn';
         $defaultScheduleId = 12;
 
-        $r1 = new FakeBookableResource(1, 'dude1');
-        $r2 = new FakeBookableResource($resourceId, $resourceName);
+        $r1 = new TestResourceDto(id: 1, name: 'dude1');
+        $r2 = new TestResourceDto(id: $resourceId, name: $resourceName);
         $resources = [$r1, $r2];
 
         $resourceGroupTree = new ResourceGroupTree();

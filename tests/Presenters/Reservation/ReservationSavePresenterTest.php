@@ -14,11 +14,6 @@ class ReservationSavePresenterTest extends TestBase
     private $user;
 
     /**
-     * @var int
-     */
-    private $userId;
-
-    /**
      * @var FakeReservationSavePage
      */
     private $page;
@@ -27,8 +22,6 @@ class ReservationSavePresenterTest extends TestBase
      * @var ReservationSavePresenter
      */
     private $presenter;
-
-    private IReservationPersistenceService&\PHPUnit\Framework\MockObject\MockObject $persistenceService;
 
     private IReservationHandler&\PHPUnit\Framework\MockObject\MockObject $handler;
 
@@ -44,18 +37,15 @@ class ReservationSavePresenterTest extends TestBase
         parent::setup();
 
         $this->user = $this->fakeServer->UserSession;
-        $this->userId = $this->user->UserId;
 
         $this->page = new FakeReservationSavePage();
 
-        $this->persistenceService = $this->createMock('IReservationPersistenceService');
         $this->handler = $this->createMock('IReservationHandler');
         $this->resourceRepository = $this->createMock('IResourceRepository');
         $this->scheduleRepository = new FakeScheduleRepository();
 
         $this->presenter = new ReservationSavePresenter(
             $this->page,
-            $this->persistenceService,
             $this->handler,
             $this->resourceRepository,
             $this->scheduleRepository,
@@ -177,5 +167,21 @@ class ReservationSavePresenterTest extends TestBase
 
         $this->assertEquals($instance->ReferenceNumber(), $this->page->referenceNumber);
         $this->assertEquals($series->RequiresApproval(), $this->page->requiresApproval);
+    }
+
+    public function testRejectedUploadFailsSaveWithErrorInsteadOfSilentlyDroppingFile()
+    {
+        $file = new FakeUploadedFile();
+        $file->OriginalName = '<b>big</b>.pdf';
+        $file->IsError = true;
+        $this->page->attachment = $file;
+
+        $this->handler->expects($this->never())->method('Handle');
+
+        $this->presenter->HandleReservation(new TestReservationSeries());
+
+        $this->assertFalse($this->page->saveSuccessful);
+        $this->assertCount(1, $this->page->errors);
+        $this->assertStringContainsString('&lt;b&gt;big&lt;/b&gt;.pdf', $this->page->errors[0]);
     }
 }

@@ -91,6 +91,18 @@ class SchedulesWebServiceTest extends TestBase
         $this->assertEquals(RestResponse::NotFound(), $this->server->_LastResponse);
     }
 
+    public function testGetSlotsWithoutDatesWritesAResponse(): void
+    {
+        // startDateTime and endDateTime are optional; omitting them used to
+        // call ToTimezone() on null. The fake database has no schedules, so
+        // the presenter reports a permission error, which proves the request
+        // got past the date handling.
+        $this->service->GetSlots(1);
+
+        $this->assertEquals(RestResponse::Unauthorized(), $this->server->_LastResponse);
+        $this->assertSame(RestResponse::UNAUTHORIZED_CODE, $this->server->_LastResponseCode);
+    }
+
     public function testScheduleResponseReturnsLayoutForEachDayOfWeek()
     {
         $schedule = new FakeSchedule();
@@ -133,13 +145,13 @@ class SchedulesWebServiceTest extends TestBase
                     $date7
                 ) {
                     return match (true) {
-                        $this->equalTo($date1)->evaluate($date, returnResult: true) => $periods1,
-                        $this->equalTo($date2)->evaluate($date, returnResult: true) => $periods2,
-                        $this->equalTo($date3)->evaluate($date, returnResult: true) => $periods3,
-                        $this->equalTo($date4)->evaluate($date, returnResult: true) => $periods4,
-                        $this->equalTo($date5)->evaluate($date, returnResult: true) => $periods5,
-                        $this->equalTo($date6)->evaluate($date, returnResult: true) => $periods6,
-                        $this->equalTo($date7)->evaluate($date, returnResult: true) => $periods7,
+                        $this->equalTo($date1)->evaluate($date, '', true) => $periods1,
+                        $this->equalTo($date2)->evaluate($date, '', true) => $periods2,
+                        $this->equalTo($date3)->evaluate($date, '', true) => $periods3,
+                        $this->equalTo($date4)->evaluate($date, '', true) => $periods4,
+                        $this->equalTo($date5)->evaluate($date, '', true) => $periods5,
+                        $this->equalTo($date6)->evaluate($date, '', true) => $periods6,
+                        $this->equalTo($date7)->evaluate($date, '', true) => $periods7,
                         default => throw new Exception('Unexpected date')
                     };
                 });

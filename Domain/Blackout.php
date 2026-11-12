@@ -323,7 +323,10 @@ class BlackoutSeries
      */
     public static function FromRow($row)
     {
-        $series = new BlackoutSeries($row[ColumnNames::OWNER_USER_ID], $row[ColumnNames::BLACKOUT_TITLE]);
+        $series = new BlackoutSeries(
+            userId: (int) $row[ColumnNames::OWNER_USER_ID],
+            title: $row[ColumnNames::BLACKOUT_TITLE]
+        );
         $series->WithId($row[ColumnNames::BLACKOUT_SERIES_ID]);
         $series->SetCurrentBlackout(new DateRange(Date::FromDatabase($row[ColumnNames::BLACKOUT_START]), Date::FromDatabase($row[ColumnNames::BLACKOUT_END])));
         $series->WithCurrentBlackoutId($row[ColumnNames::BLACKOUT_INSTANCE_ID]);
@@ -353,9 +356,8 @@ class BlackoutSeries
 
     /**
      * @param DateRange $date
-     * @return string
      */
-    private function ToKey(DateRange $date)
+    private function ToKey(DateRange $date): int
     {
         return $date->GetBegin()->Timestamp();
     }
@@ -523,7 +525,7 @@ class BlackoutResource implements IResource
     }
 
     /**
-     * @return int
+     * @return int|null null when the resource has no admin group
      */
     public function GetAdminGroupId()
     {

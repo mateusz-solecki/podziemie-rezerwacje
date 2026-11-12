@@ -3,16 +3,20 @@
 class ReservationListItem
 {
     /**
-     * @var IReservedItemView
+     * ReservationSlot and BufferSlot read ReservationItemView members that
+     * IReservedItemView does not declare, such as ReferenceNumber and
+     * IsUserParticipating().
+     *
+     * @var ReservationItemView
      */
     protected $item;
 
-    public function __construct(IReservedItemView $reservedItem)
+    public function __construct(ReservationItemView $reservedItem)
     {
         $this->item = $reservedItem;
     }
 
-    public function ReservedItem(): IReservedItemView
+    public function ReservedItem(): ReservationItemView
     {
         return $this->item;
     }
@@ -69,7 +73,13 @@ class ReservationListItem
      */
     public function BuildSlot(SchedulePeriod $start, SchedulePeriod $end, Date $displayDate, $span)
     {
-        return new ReservationSlot($start, $end, $displayDate, $span, $this->item);
+        return new ReservationSlot(
+            begin: $start,
+            end: $end,
+            displayDate: $displayDate,
+            periodSpan: $span,
+            reservation: $this->item
+        );
     }
 
     /**
@@ -81,9 +91,9 @@ class ReservationListItem
     }
 
     /**
-     * @return int
+     * Subclasses such as BufferItem use string IDs.
      */
-    public function Id()
+    public function Id(): int|string
     {
         return $this->item->GetId();
     }
@@ -172,7 +182,7 @@ class ReservationListItem
     }
 
     /**
-     * @return string
+     * @return string|null
      */
     public function GetTitle()
     {
@@ -223,7 +233,6 @@ class ReservationListItem
         $dto->IsReservation = $this->IsReservation();
         $dto->IsBuffered = false;
         $dto->IsBuffer = false;
-        $dto->Label = $this->GetTitle();
         $dto->IsPending = $this->GetPending();
         $dto->IsNew = $this->GetIsNew();
         $dto->IsUpdated = $this->GetIsUpdated();
@@ -345,7 +354,13 @@ class BufferItem extends ReservationListItem
 
     public function BuildSlot(SchedulePeriod $start, SchedulePeriod $end, Date $displayDate, $span)
     {
-        return new BufferSlot($start, $end, $displayDate, $span, $this->reservationItem->ReservedItem());
+        return new BufferSlot(
+            begin: $start,
+            end: $end,
+            displayDate: $displayDate,
+            periodSpan: $span,
+            reservation: $this->item
+        );
     }
 
     /**
@@ -374,7 +389,7 @@ class BufferItem extends ReservationListItem
         return $this->reservationItem->OccursOn($date);
     }
 
-    public function Id()
+    public function Id(): string
     {
         return $this->reservationItem->Id() . 'buffer_' . $this->location;
     }
@@ -389,9 +404,9 @@ class BufferItem extends ReservationListItem
         return false;
     }
 
-    public function BufferTime()
+    public function BufferTime(): ?TimeInterval
     {
-        return 0;
+        return null;
     }
 }
 
@@ -426,15 +441,15 @@ class BlackoutListItem extends ReservationListItem
 class ReservationListItemDto
 {
     /**
-     * @var Date
+     * @var int Unix timestamp
      */
     public $StartDate;
     /**
-     * @var Date
+     * @var int Unix timestamp
      */
     public $EndDate;
     /**
-     * @var int
+     * @var int|string buffer entries use string IDs
      */
     public $Id;
     /**
@@ -514,11 +529,11 @@ class ReservationListItemDto
      */
     public $IsAdmin;
     /**
-     * @var string|null
+     * @var int|null Unix timestamp
      */
     public $BufferedStartDate;
     /**
-     * @var string|null
+     * @var int|null Unix timestamp
      */
     public $BufferedEndDate;
     /**

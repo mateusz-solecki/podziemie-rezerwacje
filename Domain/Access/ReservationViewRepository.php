@@ -95,8 +95,8 @@ interface IReservationViewRepository
     public function GetAccessoryReservationList(Date $startDate, Date $endDate, $accessoryName);
 
     /**
-     * @param int $pageNumber
-     * @param int $pageSize
+     * @param int|null $pageNumber null for no paging
+     * @param int|null $pageSize null for no paging
      * @param string $sortField
      * @param string $sortDirection
      * @param ISqlFilter $filter
@@ -113,8 +113,8 @@ interface IReservationViewRepository
     public function GetBlackoutsWithin(DateRange $dateRange, $scheduleId = ReservationViewRepository::ALL_SCHEDULES, $resourceIds = ReservationViewRepository::ALL_RESOURCES);
 
     /**
-     * @param int $pageNumber
-     * @param int $pageSize
+     * @param int|null $pageNumber null for no paging
+     * @param int|null $pageSize null for no paging
      * @param null|string $sortField
      * @param null|string $sortDirection
      * @param null|ISqlFilter $filter

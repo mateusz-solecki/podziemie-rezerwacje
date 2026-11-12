@@ -240,8 +240,8 @@ class SchedulePresenterTest extends TestBase
 
     public function testScheduleBuilderGetCurrentScheduleReturnsSelectedScheduleOnPostBack()
     {
-        $s1 = $this->createMock('ISchedule');
-        $s2 = $this->createMock('ISchedule');
+        $s1 = $this->createMock('Schedule');
+        $s2 = $this->createMock('Schedule');
 
         $s1
                 ->expects($this->once())
@@ -1134,14 +1134,14 @@ class FakeSchedulePage implements ISchedulePage
     }
 
     /**
-     * @param Attribute[] $attributes
+     * @param LBAttribute[] $attributes
      */
     public function SetResourceCustomAttributes($attributes)
     {
     }
 
     /**
-     * @param Attribute[] $attributes
+     * @param LBAttribute[] $attributes
      */
     public function SetResourceTypeCustomAttributes($attributes)
     {

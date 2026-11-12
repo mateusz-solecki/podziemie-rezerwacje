@@ -5,10 +5,7 @@ require_once(ROOT_DIR . 'Presenters/Admin/ManageAnnouncementsPresenter.php');
 
 interface IManageAnnouncementsPage extends IActionPage
 {
-    /**
-     * @return int
-     */
-    public function GetAnnouncementId();
+    public function GetAnnouncementId(): ?int;
 
     /**
      * @return string
@@ -25,10 +22,7 @@ interface IManageAnnouncementsPage extends IActionPage
      */
     public function GetEnd();
 
-    /**
-     * @return string
-     */
-    public function GetPriority();
+    public function GetPriority(): ?int;
 
     /**
      * @return int[]
@@ -66,10 +60,7 @@ interface IManageAnnouncementsPage extends IActionPage
      */
     public function BindNumberOfUsersToBeSent($number);
 
-    /**
-     * @return int
-     */
-    public function GetDisplayPage();
+    public function GetDisplayPage(): ?int;
 }
 
 class ManageAnnouncementsPage extends ActionPage implements IManageAnnouncementsPage
@@ -88,7 +79,6 @@ class ManageAnnouncementsPage extends ActionPage implements IManageAnnouncements
             new AnnouncementRepository(),
             new GroupRepository(),
             $resourceRepository,
-            PluginManager::Instance()->LoadPermission(),
             new UserRepository()
         );
     }
@@ -113,9 +103,9 @@ class ManageAnnouncementsPage extends ActionPage implements IManageAnnouncements
         $this->presenter->ProcessAction();
     }
 
-    public function GetAnnouncementId()
+    public function GetAnnouncementId(): ?int
     {
-        return $this->GetQuerystring(QueryStringKeys::ANNOUNCEMENT_ID);
+        return $this->GetQuerystringInt(key: QueryStringKeys::ANNOUNCEMENT_ID);
     }
 
     public function GetText()
@@ -133,9 +123,9 @@ class ManageAnnouncementsPage extends ActionPage implements IManageAnnouncements
         return $this->GetForm(FormKeys::ANNOUNCEMENT_END);
     }
 
-    public function GetPriority()
+    public function GetPriority(): ?int
     {
-        return $this->GetForm(FormKeys::ANNOUNCEMENT_PRIORITY);
+        return $this->GetFormInt(key: FormKeys::ANNOUNCEMENT_PRIORITY);
     }
 
     public function ProcessDataRequest($dataRequest)
@@ -186,8 +176,8 @@ class ManageAnnouncementsPage extends ActionPage implements IManageAnnouncements
         return isset($send);
     }
 
-    public function GetDisplayPage()
+    public function GetDisplayPage(): ?int
     {
-        return $this->GetForm(FormKeys::DISPLAY_PAGE);
+        return $this->GetFormInt(key: FormKeys::DISPLAY_PAGE);
     }
 }

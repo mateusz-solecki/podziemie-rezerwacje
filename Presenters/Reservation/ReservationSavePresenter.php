@@ -23,11 +23,6 @@ class ReservationSavePresenter implements IReservationSavePresenter
     private $page;
 
     /**
-     * @var IReservationPersistenceService
-     */
-    private $persistenceService;
-
-    /**
      * @var IReservationHandler
      */
     private $handler;
@@ -48,14 +43,12 @@ class ReservationSavePresenter implements IReservationSavePresenter
 
     public function __construct(
         IReservationSavePage $page,
-        IReservationPersistenceService $persistenceService,
         IReservationHandler $handler,
         IResourceRepository $resourceRepository,
         IScheduleRepository $scheduleRepository,
         UserSession $userSession
     ) {
         $this->page = $page;
-        $this->persistenceService = $persistenceService;
         $this->handler = $handler;
         $this->resourceRepository = $resourceRepository;
         $this->scheduleRepository = $scheduleRepository;
@@ -108,9 +101,7 @@ class ReservationSavePresenter implements IReservationSavePresenter
 
         foreach ($attachments as $attachment) {
             if ($attachment != null) {
-                if ($attachment->IsError()) {
-                    Log::Error('Error attaching file %s. %s', $attachment->OriginalName(), $attachment->Error());
-                } else {
+                if (!$attachment->IsError()) {
                     $att = ReservationAttachment::Create($attachment->OriginalName(), $attachment->MimeType(), $attachment->Size(), $attachment->Contents(), $attachment->Extension(), 0);
                     $reservationSeries->AddAttachment($att);
                 }
@@ -141,6 +132,13 @@ class ReservationSavePresenter implements IReservationSavePresenter
      */
     public function HandleReservation($reservationSeries)
     {
+        $rejectedUploads = UploadedFile::GetRejectedMessages($this->page->GetAttachments());
+        if (!empty($rejectedUploads)) {
+            $this->page->SetSaveSuccessfulMessage(false);
+            $this->page->SetErrors($rejectedUploads);
+            return;
+        }
+
         $successfullySaved = $this->handler->Handle(
             $reservationSeries,
             $this->page

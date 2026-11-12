@@ -49,10 +49,10 @@ class SchedulesWebService
      * @name GetSchedule
      * @description Loads a specific schedule by id
      * @response ScheduleResponse
-     * @param $scheduleId
+     * @param int $scheduleId
      * @return void
      */
-    public function GetSchedule($scheduleId)
+    public function GetSchedule(int $scheduleId)
     {
         $schedule = $this->scheduleRepository->LoadById($scheduleId);
 
@@ -71,14 +71,14 @@ class SchedulesWebService
      * If no dates are provided the default schedule dates will be returned.
      * If dates do not include the timezone offset, the timezone of the authenticated user will be assumed.
      * @response ScheduleSlotsResponse
-     * @param $scheduleId
+     * @param int $scheduleId
      * @return void
      */
-    public function GetSlots($scheduleId)
+    public function GetSlots(int $scheduleId)
     {
         $tz = $this->server->GetSession()->Timezone;
-        $startDate = $this->GetDate(WebServiceQueryStringKeys::START_DATE_TIME)->ToTimezone($tz);
-        $endDate = $this->GetDate(WebServiceQueryStringKeys::END_DATE_TIME)->ToTimezone($tz);
+        $startDate = $this->GetDate(WebServiceQueryStringKeys::START_DATE_TIME)?->ToTimezone($tz);
+        $endDate = $this->GetDate(WebServiceQueryStringKeys::END_DATE_TIME)?->ToTimezone($tz);
 
         $resourceId = $this->server->GetQueryString(WebServiceQueryStringKeys::RESOURCE_ID);
 
@@ -142,12 +142,6 @@ class ScheduleWebServicePageBuilder extends SchedulePageBuilder
         // no op
     }
 
-    public function GetGroupId($scheduleId, ISchedulePage $page)
-    {
-        // no op
-        return 0;
-    }
-
     public function GetResourceIds($scheduleId, ISchedulePage $page)
     {
         return [$this->resourceId];
@@ -190,28 +184,13 @@ class ScheduleWebServiceView implements ISchedulePage
     private $resources;
 
     /**
-     * @var Date
+     * @var Date|null
      */
     private $startDate;
 
     /**
-     * @var DateRange
-     */
-    private $availability;
-
-    /**
-     * @var bool
-     */
-    private $available = true;
-
-    /**
-     * @var bool
-     */
-    private $allowConcurrentReservations;
-
-    /**
      * @param int $scheduleId
-     * @param int $resourceId
+     * @param string|null $resourceId the optional resourceId query string value
      */
     public function __construct(private $scheduleId, $startDate, private $resourceId)
     {
@@ -336,7 +315,10 @@ class ScheduleWebServiceView implements ISchedulePage
             return [];
         }
 
-        return [$this->resourceId];
+        // Same conversion as GetResourceId(). SchedulePageBuilder replaces
+        // this list with GetResourceId() whenever that is non-zero, and a
+        // value that converts to 0 matches no resource either way.
+        return [$this->GetResourceId()];
     }
 
     public function SetResourceGroupTree(ResourceGroupTree $resourceGroupTree)
@@ -514,8 +496,7 @@ class ScheduleWebServiceView implements ISchedulePage
 
     public function BindScheduleAvailability($availability, $tooEarly)
     {
-        $this->availability = $availability;
-        $this->available = false;
+        // no-op
     }
 
     public function BindViewableResourceReservations($resourceIds)
@@ -525,7 +506,7 @@ class ScheduleWebServiceView implements ISchedulePage
 
     public function SetAllowConcurrent($allowConcurrentReservations)
     {
-        $this->allowConcurrentReservations = $allowConcurrentReservations;
+        // no-op
     }
 
     public function GetReservationRequest()

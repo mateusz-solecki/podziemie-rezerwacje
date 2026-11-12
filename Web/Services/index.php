@@ -89,6 +89,14 @@ $app->hook('slim.before.dispatch', function () use ($app, $server, $registry) {
     }
 });
 
+// Unknown routes, including IDs that fail the numeric route conditions set
+// by SlimWebServiceRegistry, get the same JSON body as a missing record
+// instead of Slim's HTML page.
+$app->notFound(function () use ($app) {
+    $app->response()->header('Content-Type', 'application/json');
+    echo json_encode(RestResponse::NotFound());
+});
+
 $app->error(function (\Exception $e) use ($app) {
     require_once(ROOT_DIR . 'lib/Common/Logging/Log.php');
     Log::Error('Slim Exception. %s', $e);
@@ -129,7 +137,14 @@ function RegisterAuthentication(SlimServer $server, SlimWebServiceRegistry $regi
 
 function RegisterReservations(SlimServer $server, SlimWebServiceRegistry $registry)
 {
-    $readService = new ReservationsWebService($server, new ReservationViewRepository(), new PrivacyFilter(new ReservationAuthorization(PluginManager::Instance()->LoadAuthorization())), new AttributeService(new AttributeRepository()));
+    $reservationAuthorization = new ReservationAuthorization(PluginManager::Instance()->LoadAuthorization());
+    $readService = new ReservationsWebService(
+        server: $server,
+        reservationViewRepository: new ReservationViewRepository(),
+        privacyFilter: new PrivacyFilter($reservationAuthorization),
+        attributeService: new AttributeService(new AttributeRepository()),
+        reservationAuthorization: $reservationAuthorization,
+    );
     $writeService = new ReservationWriteWebService($server, new ReservationSaveController(new ReservationPresenterFactory()));
 
     $roGroupId = GetConfigGroup(ConfigKeys::API_RESERVATIONS_RO_GROUP);
@@ -159,7 +174,16 @@ function RegisterResources(SlimServer $server, SlimWebServiceRegistry $registry)
         reservationRepository: new ReservationViewRepository(),
         scheduleRepository: new ScheduleRepository()
     );
-    $writeWebService = new ResourcesWriteWebService($server, new ResourceSaveController($resourceRepository, new ResourceRequestValidator($attributeService)));
+    $writeWebService = new ResourcesWriteWebService(
+        server: $server,
+        controller: new ResourceSaveController(
+            repository: $resourceRepository,
+            validator: new ResourceRequestValidator(
+                attributeService: $attributeService,
+                groupRepository: new GroupRepository()
+            )
+        )
+    );
 
     $roGroupId = GetConfigGroup(ConfigKeys::API_RESOURCES_RO_GROUP);
     $category = new SlimWebServiceRegistryCategory('Resources', roGroupId: $roGroupId);

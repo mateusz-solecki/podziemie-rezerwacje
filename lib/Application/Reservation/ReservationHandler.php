@@ -56,18 +56,12 @@ class ReservationHandler implements IReservationHandler
 
     /**
      * @static
-     * @param $reservationAction string|ReservationAction
-     * @param $persistenceService null|IReservationPersistenceService
+     * @param string $reservationAction one of the ReservationAction constants
      * @param UserSession $session
      * @return IReservationHandler
      */
-    public static function Create($reservationAction, $persistenceService, UserSession $session)
+    public static function Create($reservationAction, IReservationPersistenceService $persistenceService, UserSession $session)
     {
-        if (!isset($persistenceService)) {
-            $persistenceFactory = new ReservationPersistenceFactory();
-            $persistenceService = $persistenceFactory->Create($reservationAction);
-        }
-
         $validationFactory = new ReservationValidationFactory();
         $validationService = $validationFactory->Create($reservationAction, $session);
 

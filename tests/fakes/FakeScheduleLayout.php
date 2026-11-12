@@ -28,6 +28,8 @@ class FakeScheduleLayout implements IScheduleLayout
      */
     public $_DailyLayout = [];
 
+    public ?PeakTimes $_PeakTimes = null;
+
     public function __construct()
     {
         $this->_SlotCount = new SlotCount(1, 2);
@@ -86,19 +88,29 @@ class FakeScheduleLayout implements IScheduleLayout
      * @return SlotCount
      * @internal param $scheduleId
      */
-    public function GetSlotCount(Date $startDate, Date $endDate)
+    public function GetSlotCount(Date $startDate, Date $endDate): SlotCount
     {
         return $this->_SlotCount;
     }
 
     public function ChangePeakTimes(PeakTimes $peakTimes)
     {
-        // TODO: Implement ChangePeakTimes() method.
+        $this->_PeakTimes = $peakTimes;
     }
 
     public function RemovePeakTimes()
     {
-        // TODO: Implement RemovePeakTimes() method.
+        $this->_PeakTimes = null;
+    }
+
+    public function HasPeakTimesDefined(): bool
+    {
+        return $this->_PeakTimes !== null;
+    }
+
+    public function GetPeakTimes(): ?PeakTimes
+    {
+        return $this->_PeakTimes;
     }
 
     /**

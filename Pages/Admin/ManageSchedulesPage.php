@@ -7,25 +7,16 @@ require_once(ROOT_DIR . 'Domain/Access/ScheduleRepository.php');
 
 interface IUpdateSchedulePage
 {
-    /**
-     * @return int
-     */
-    public function GetScheduleId();
+    public function GetScheduleId(): ?int;
 
     /**
      * @return string
      */
     public function GetScheduleName();
 
-    /**
-     * @return string
-     */
-    public function GetStartDay();
+    public function GetStartDay(): ?int;
 
-    /**
-     * @return string
-     */
-    public function GetDaysVisible();
+    public function GetDaysVisible(): ?int;
 
     /**
      * @return string
@@ -57,20 +48,19 @@ interface IUpdateSchedulePage
      */
     public function GetUsingSingleLayout();
 
-    /**
-     * @return int
-     */
-    public function GetSourceScheduleId();
+    public function GetSourceScheduleId(): ?int;
 
-    /**
-     * @return int
-     */
-    public function GetTargetScheduleId();
+    public function GetTargetScheduleId(): ?int;
 
     /**
      * @return string
      */
     public function GetValue();
+
+    /**
+     * @return int|null the submitted value as an integer, or null when it is not one
+     */
+    public function GetIntValue(): ?int;
 
     /**
      * @return int
@@ -109,10 +99,7 @@ interface IManageSchedulesPage extends IUpdateSchedulePage, IActionPage, IPageab
 
     public function SetTimezones($timezoneValues, $timezoneOutput);
 
-    /**
-     * @return int
-     */
-    public function GetAdminGroupId();
+    public function GetAdminGroupId(): ?int;
 
     /**
      * @return int[]
@@ -144,25 +131,13 @@ interface IManageSchedulesPage extends IUpdateSchedulePage, IActionPage, IPageab
      */
     public function GetPeakEndTime();
 
-    /**
-     * @return int
-     */
-    public function GetPeakBeginDay();
+    public function GetPeakBeginDay(): ?int;
 
-    /**
-     * @return int
-     */
-    public function GetPeakBeginMonth();
+    public function GetPeakBeginMonth(): ?int;
 
-    /**
-     * @return int
-     */
-    public function GetPeakEndDay();
+    public function GetPeakEndDay(): ?int;
 
-    /**
-     * @return int
-     */
-    public function GetPeakEndDMonth();
+    public function GetPeakEndDMonth(): ?int;
 
     public function DisplayPeakTimes(IScheduleLayout $layout);
 
@@ -172,9 +147,9 @@ interface IManageSchedulesPage extends IUpdateSchedulePage, IActionPage, IPageab
     public function GetDeletePeakTimes();
 
     /**
-     * @param BookableResource[] $resources
+     * @param array<int, BookableResource[]> $resources resources grouped by schedule ID
      */
-    public function BindResources($resources);
+    public function BindResources(array $resources): void;
 
     /**
      * @return bool
@@ -197,10 +172,7 @@ interface IManageSchedulesPage extends IUpdateSchedulePage, IActionPage, IPageab
      */
     public function DisplayAvailability($schedule, $timezone);
 
-    /**
-     * @return int
-     */
-    public function GetLayoutType();
+    public function GetLayoutType(): ?int;
 
     /**
      * @return string
@@ -242,10 +214,7 @@ interface IManageSchedulesPage extends IUpdateSchedulePage, IActionPage, IPageab
      */
     public function GetSlotId();
 
-    /**
-     * @return int
-     */
-    public function GetDefaultStyle();
+    public function GetDefaultStyle(): ?int;
 }
 
 class ManageSchedulesPage extends ActionPage implements IManageSchedulesPage
@@ -323,11 +292,11 @@ class ManageSchedulesPage extends ActionPage implements IManageSchedulesPage
         $this->Set('SourceSchedules', $sourceSchedules);
     }
 
-    public function GetScheduleId()
+    public function GetScheduleId(): ?int
     {
-        $id = $this->GetQuerystring(QueryStringKeys::SCHEDULE_ID);
+        $id = $this->GetQuerystringInt(key: QueryStringKeys::SCHEDULE_ID);
         if (empty($id)) {
-            $id = $this->GetForm(FormKeys::PK);
+            $id = $this->GetFormInt(key: FormKeys::PK);
         }
 
         return $id;
@@ -338,14 +307,14 @@ class ManageSchedulesPage extends ActionPage implements IManageSchedulesPage
         return $this->server->GetForm(FormKeys::SCHEDULE_NAME);
     }
 
-    public function GetStartDay()
+    public function GetStartDay(): ?int
     {
-        return $this->server->GetForm(FormKeys::SCHEDULE_WEEKDAY_START);
+        return $this->GetFormInt(key: FormKeys::SCHEDULE_WEEKDAY_START);
     }
 
-    public function GetDaysVisible()
+    public function GetDaysVisible(): ?int
     {
-        return $this->server->GetForm(FormKeys::SCHEDULE_DAYS_VISIBLE);
+        return $this->GetFormInt(key: FormKeys::SCHEDULE_DAYS_VISIBLE);
     }
 
     public function GetReservableSlots()
@@ -388,14 +357,14 @@ class ManageSchedulesPage extends ActionPage implements IManageSchedulesPage
         return $this->server->GetForm(FormKeys::TIMEZONE);
     }
 
-    public function GetSourceScheduleId()
+    public function GetSourceScheduleId(): ?int
     {
-        return $this->server->GetForm(FormKeys::SCHEDULE_ID);
+        return $this->GetFormInt(key: FormKeys::SCHEDULE_ID);
     }
 
-    public function GetTargetScheduleId()
+    public function GetTargetScheduleId(): ?int
     {
-        return $this->server->GetForm(FormKeys::SCHEDULE_ID);
+        return $this->GetFormInt(key: FormKeys::SCHEDULE_ID);
     }
 
     public function ProcessDataRequest($dataRequest)
@@ -416,12 +385,9 @@ class ManageSchedulesPage extends ActionPage implements IManageSchedulesPage
         $this->Set('GroupLookup', $groupLookup);
     }
 
-    /**
-     * @return int
-     */
-    public function GetAdminGroupId()
+    public function GetAdminGroupId(): ?int
     {
-        return $this->server->GetForm(FormKeys::SCHEDULE_ADMIN_GROUP_ID);
+        return $this->GetFormInt(key: FormKeys::SCHEDULE_ADMIN_GROUP_ID);
     }
 
     /**
@@ -457,6 +423,11 @@ class ManageSchedulesPage extends ActionPage implements IManageSchedulesPage
     public function GetValue()
     {
         return $this->GetForm(FormKeys::VALUE);
+    }
+
+    public function GetIntValue(): ?int
+    {
+        return $this->GetFormInt(key: FormKeys::VALUE);
     }
 
     public function GetPeakWeekdays()
@@ -529,24 +500,24 @@ class ManageSchedulesPage extends ActionPage implements IManageSchedulesPage
         return $this->GetForm(FormKeys::PEAK_END_TIME);
     }
 
-    public function GetPeakBeginDay()
+    public function GetPeakBeginDay(): ?int
     {
-        return $this->GetForm(FormKeys::PEAK_BEGIN_DAY);
+        return $this->GetFormInt(key: FormKeys::PEAK_BEGIN_DAY);
     }
 
-    public function GetPeakBeginMonth()
+    public function GetPeakBeginMonth(): ?int
     {
-        return $this->GetForm(FormKeys::PEAK_BEGIN_MONTH);
+        return $this->GetFormInt(key: FormKeys::PEAK_BEGIN_MONTH);
     }
 
-    public function GetPeakEndDay()
+    public function GetPeakEndDay(): ?int
     {
-        return $this->GetForm(FormKeys::PEAK_END_DAY);
+        return $this->GetFormInt(key: FormKeys::PEAK_END_DAY);
     }
 
-    public function GetPeakEndDMonth()
+    public function GetPeakEndDMonth(): ?int
     {
-        return $this->GetForm(FormKeys::PEAK_END_MONTH);
+        return $this->GetFormInt(key: FormKeys::PEAK_END_MONTH);
     }
 
     public function GetDeletePeakTimes()
@@ -555,7 +526,7 @@ class ManageSchedulesPage extends ActionPage implements IManageSchedulesPage
         return $delete == '1';
     }
 
-    public function BindResources($resources)
+    public function BindResources(array $resources): void
     {
         $this->Set('Resources', $resources);
     }
@@ -582,9 +553,9 @@ class ManageSchedulesPage extends ActionPage implements IManageSchedulesPage
         $this->Display('Admin/Schedules/manage_availability.tpl');
     }
 
-    public function GetLayoutType()
+    public function GetLayoutType(): ?int
     {
-        return $this->GetForm(FormKeys::LAYOUT_TYPE);
+        return $this->GetFormInt(key: FormKeys::LAYOUT_TYPE);
     }
 
     public function GetLayoutStart()
@@ -627,9 +598,9 @@ class ManageSchedulesPage extends ActionPage implements IManageSchedulesPage
         return $this->GetForm(FormKeys::LAYOUT_PERIOD_ID);
     }
 
-    public function GetDefaultStyle()
+    public function GetDefaultStyle(): ?int
     {
-        return $this->GetForm(FormKeys::SCHEDULE_DEFAULT_STYLE);
+        return $this->GetFormInt(key: FormKeys::SCHEDULE_DEFAULT_STYLE);
     }
 
     public function GetMaximumConcurrentReservations()

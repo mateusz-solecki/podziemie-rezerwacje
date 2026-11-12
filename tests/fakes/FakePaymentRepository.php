@@ -91,7 +91,7 @@ class FakePaymentRepository implements IPaymentRepository
 
     public function SavePayPalPaymentResult(PayPalPaymentResult $result)
     {
-        $this->_LastSavedPayPalResult;
+        $this->_LastSavedPayPalResult = $result;
     }
 
     public function GetList($pageNumber, $pageSize, $userId = -1, $sortField = null, $sortDirection = null, $filter = null)
@@ -103,7 +103,7 @@ class FakePaymentRepository implements IPaymentRepository
         return $this->_TransactionLogs ?? new PageableData();
     }
 
-    public function GetTransactionLogView($transactionLogId)
+    public function GetTransactionLogView($transactionLogId): ?TransactionLogView
     {
         $this->_LastTransactionLogId = $transactionLogId;
         return $this->_TransactionLogView;

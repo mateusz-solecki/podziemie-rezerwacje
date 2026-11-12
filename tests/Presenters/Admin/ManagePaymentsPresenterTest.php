@@ -30,7 +30,7 @@ class ManagePaymentsPresenterTest extends TestBase
 
     public function testPageLoadSetsCurrentCreditValues()
     {
-        $creditCost = new CreditCost(44.4, 'USD');
+        $creditCost = new CreditCost(count: 1, cost: 44.4, currency: 'USD');
         $this->paymentRepository->_CreditCost = [$creditCost];
 
         $this->presenter->PageLoad();
@@ -131,6 +131,34 @@ class ManagePaymentsPresenterTest extends TestBase
         $this->assertEquals($this->paymentRepository->_TransactionLogView, $gateway->_LastTransactionView);
         $this->assertEquals(100, $gateway->_LastRefundAmount);
         $this->assertEquals(true, $this->page->_RefundIssued);
+    }
+
+    public function testRefundIsNotIssuedWhenTransactionLogDoesNotExist(): void
+    {
+        $this->page->_RefundTransactionLogId = 999;
+        $this->page->_RefundAmount = 100;
+        $this->paymentRepository->_TransactionLogView = null;
+
+        $this->presenter->IssueRefund();
+
+        $gateway = $this->paymentRepository->_PayPal;
+        $this->assertInstanceOf(FakePayPalGateway::class, $gateway);
+        $this->assertFalse($this->page->_RefundIssued);
+        $this->assertNull($gateway->_LastTransactionView);
+    }
+
+    public function testPayPalRefundIsNotIssuedWhenGatewayReturnsNoObject(): void
+    {
+        $this->page->_RefundTransactionLogId = 10;
+        $this->page->_RefundAmount = 100;
+        $this->paymentRepository->_TransactionLogView = $this->GetTransactionLogView();
+        $gateway = $this->paymentRepository->_PayPal;
+        $this->assertInstanceOf(FakePayPalGateway::class, $gateway);
+        $gateway->_Refund = null;
+
+        $this->presenter->IssueRefund();
+
+        $this->assertFalse($this->page->_RefundIssued);
     }
 
     public function testIssuesStripeRefund()
@@ -261,12 +289,12 @@ class FakeManagePaymentsPage extends ManagePaymentsPage
         $this->_StripeSecretKey = $secretKey;
     }
 
-    public function GetPageNumber()
+    public function GetPageNumber(): int
     {
         return $this->_CurrentPage;
     }
 
-    public function GetPageSize()
+    public function GetPageSize(): int
     {
         return $this->_PageSize;
     }

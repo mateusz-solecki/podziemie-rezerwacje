@@ -94,7 +94,6 @@ abstract class ReservationEmailMessage extends EmailMessage
         $context = new ReservationEmailTemplateContext(
             reservationSeries: $this->reservationSeries,
             reservationOwner: $this->reservationOwner,
-            primaryResource: $this->primaryResource,
             attributeRepository: $this->attributeRepository
         );
 
@@ -183,7 +182,7 @@ abstract class ReservationEmailMessage extends EmailMessage
 
     /**
      * @param Reservation $currentInstance
-     * @param Attribute[] $attributeValues
+     * @param LBAttribute[] $attributeValues
      */
     protected function PopulateIcsAttachment($currentInstance, $attributeValues)
     {

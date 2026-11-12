@@ -27,12 +27,20 @@ class ReservationsWebService
      */
     private $attributeService;
 
+    private IReservationAuthorization $reservationAuthorization;
+
+    private ?IResourceRepository $resourceRepository;
+
     public function __construct(
         IRestServer $server,
         IReservationViewRepository $reservationViewRepository,
         IPrivacyFilter $privacyFilter,
-        IAttributeService $attributeService
+        IAttributeService $attributeService,
+        IReservationAuthorization $reservationAuthorization,
+        ?IResourceRepository $resourceRepository = null
     ) {
+        $this->reservationAuthorization = $reservationAuthorization;
+        $this->resourceRepository = $resourceRepository;
         $this->server = $server;
         $this->reservationViewRepository = $reservationViewRepository;
         $this->attributeService = $attributeService;
@@ -71,8 +79,7 @@ class ReservationsWebService
         if ($userSession->IsAdmin) {
             $reservations = $allReservations;
         } else {
-            $resourceRepository = new ResourceRepository();
-            $allowedResourceIds = $resourceRepository->GetUserResourceIdList();
+            $allowedResourceIds = $this->GetResourceRepository()->GetUserResourceIdList();
             $reservations = [];
             foreach ($allReservations as $reservation) {
                 if (in_array($reservation->ResourceId, $allowedResourceIds)) {
@@ -97,24 +104,61 @@ class ReservationsWebService
 
         $reservation = $this->reservationViewRepository->GetReservationForEditing($referenceNumber);
 
+        if (!empty($reservation->ReferenceNumber) && !$this->CanViewReservation($reservation)) {
+            // Respond as if the reservation does not exist so reference
+            // numbers cannot be probed.
+            Log::Debug('GetReservation denied. $referenceNumber=%s', $referenceNumber);
+            $this->server->WriteResponse(RestResponse::NotFound(), RestResponse::NOT_FOUND_CODE);
+            return;
+        }
+
         if (!empty($reservation->ReferenceNumber)) {
             $attributes = $this->attributeService->GetByCategory(CustomAttributeCategory::RESERVATION);
-            $response = new ReservationResponse($this->server, $reservation, $this->privacyFilter, $attributes);
+            $response = new ReservationResponse(
+                server: $this->server,
+                reservation: $reservation,
+                privacyFilter: $this->privacyFilter,
+                reservationAuthorization: $this->reservationAuthorization,
+                attributes: $attributes,
+            );
             $this->server->WriteResponse($response);
         } else {
             $this->server->WriteResponse($response = RestResponse::NotFound(), RestResponse::NOT_FOUND_CODE);
         }
     }
 
-    /**
-     * @param int|null $userId
-     * @param int|null $resourceId
-     * @param int|null $scheduleId
-     * @return bool
-     */
-    private function FilterProvided($userId, $resourceId, $scheduleId)
+    private function GetResourceRepository(): IResourceRepository
     {
-        return !empty($userId) || !empty($resourceId) || !empty($scheduleId);
+        if ($this->resourceRepository === null) {
+            $this->resourceRepository = new ResourceRepository();
+        }
+        return $this->resourceRepository;
+    }
+
+    /**
+     * Mirrors the web reservation view (tpl/Reservation/view.tpl): admins,
+     * the owner, participants, invitees, and users with access to the
+     * primary resource or any additional resource may view the reservation.
+     */
+    private function CanViewReservation(ReservationView $reservation): bool
+    {
+        $userSession = $this->server->GetSession();
+        if ($userSession->IsAdmin || $reservation->OwnerId == $userSession->UserId) {
+            return true;
+        }
+
+        foreach ([$reservation->Participants, $reservation->Invitees] as $users) {
+            foreach ($users as $user) {
+                if ($user->UserId == $userSession->UserId) {
+                    return true;
+                }
+            }
+        }
+
+        $reservationResourceIds = array_merge([$reservation->ResourceId], $reservation->AdditionalResourceIds);
+        $allowedResourceIds = $this->GetResourceRepository()->GetUserResourceIdList();
+
+        return count(array_intersect($reservationResourceIds, $allowedResourceIds)) > 0;
     }
 
     /**

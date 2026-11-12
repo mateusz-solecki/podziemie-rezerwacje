@@ -183,4 +183,169 @@ class PageTest extends TestBase
             'ico' => ['ico'],
         ];
     }
+
+    #[DataProvider('querystringIntProvider')]
+    public function testGetQuerystringIntAcceptsOnlyIntegerIds(mixed $value, ?int $expected): void
+    {
+        $this->fakeServer->SetQuerystring('id', $value);
+        $page = new class () extends Page {
+            public function __construct()
+            {
+                $this->server = ServiceLocator::GetServer();
+            }
+
+            public function PageLoad()
+            {
+            }
+
+            public function ReadInt(string $key): ?int
+            {
+                return $this->GetQuerystringInt(key: $key);
+            }
+        };
+
+        $this->assertSame($expected, $page->ReadInt(key: 'id'));
+    }
+
+    /**
+     * @return array<string, array{0: mixed, 1: int|null}>
+     */
+    public static function querystringIntProvider(): array
+    {
+        return [
+            'integer ID' => ['42', 42],
+            'zero' => ['0', 0],
+            'leading zeros' => ['007', 7],
+            'multiple zeros' => ['000', 0],
+            'largest integer' => [(string)PHP_INT_MAX, PHP_INT_MAX],
+            'largest integer with leading zeros' => ['00' . PHP_INT_MAX, PHP_INT_MAX],
+            'one past largest integer' => ['9223372036854775808', null],
+            'very long digit string' => [str_repeat('9', 40), null],
+            'missing' => [null, null],
+            'empty' => ['', null],
+            'negative' => ['-1', null],
+            'decimal' => ['1.5', null],
+            'prefixed' => ['r12', null],
+            'trailing text' => ['12abc', null],
+            'array' => [['1'], null],
+        ];
+    }
+
+    #[DataProvider('formIntProvider')]
+    public function testGetFormIntKeepsNegativeIntegers(mixed $value, ?int $expected): void
+    {
+        $this->fakeServer->SetForm('id', $value);
+
+        $this->assertSame($expected, $this->CreateFormReadingPage()->ReadFormInt(key: 'id'));
+    }
+
+    /**
+     * @return array<string, array{0: mixed, 1: int|null}>
+     */
+    public static function formIntProvider(): array
+    {
+        return [
+            'integer ID' => ['42', 42],
+            'zero' => ['0', 0],
+            'unchanged sentinel' => ['-1', -1],
+            'negative with leading zeros' => ['-007', -7],
+            'negative zero' => ['-0', 0],
+            'largest integer' => [(string)PHP_INT_MAX, PHP_INT_MAX],
+            'smallest integer' => [(string)PHP_INT_MIN, PHP_INT_MIN],
+            'one past largest integer' => ['9223372036854775808', null],
+            'one past smallest integer' => ['-9223372036854775809', null],
+            'missing' => [null, null],
+            'empty' => ['', null],
+            'minus only' => ['-', null],
+            'double minus' => ['--1', null],
+            'plus sign' => ['+1', null],
+            'decimal' => ['1.5', null],
+            'trailing text' => ['12abc', null],
+            'array' => [['1'], null],
+        ];
+    }
+
+    #[DataProvider('formFloatProvider')]
+    public function testGetFormFloatKeepsDecimals(mixed $value, ?float $expected): void
+    {
+        $this->fakeServer->SetForm('credits', $value);
+
+        $this->assertSame($expected, $this->CreateFormReadingPage()->ReadFormFloat(key: 'credits'));
+    }
+
+    /**
+     * @return array<string, array{0: mixed, 1: float|null}>
+     */
+    public static function formFloatProvider(): array
+    {
+        return [
+            'integer' => ['2', 2.0],
+            'decimal' => ['1.5', 1.5],
+            'two decimal places' => ['0.25', 0.25],
+            'negative' => ['-1', -1.0],
+            'missing' => [null, null],
+            'empty' => ['', null],
+            'not numeric' => ['abc', null],
+            'trailing text' => ['1.5abc', null],
+            'infinite' => ['1e999', null],
+            'array' => [['1.5'], null],
+        ];
+    }
+
+    #[DataProvider('formIntListProvider')]
+    public function testGetFormIntListParsesSingleAndMultipleValues(mixed $value, array $expected): void
+    {
+        $this->fakeServer->SetForm('ids', $value);
+
+        $this->assertSame($expected, $this->CreateFormReadingPage()->ReadFormIntList(key: 'ids'));
+    }
+
+    /**
+     * @return array<string, array{0: mixed, 1: int[]}>
+     */
+    public static function formIntListProvider(): array
+    {
+        return [
+            'missing' => [null, []],
+            'empty' => ['', []],
+            'single value' => ['5', [5]],
+            'list' => [['5', '6'], [5, 6]],
+            'negative kept' => [['-1', '2'], [-1, 2]],
+            'invalid values dropped' => [['5', 'abc', '', '1.5', '6'], [5, 6]],
+            'nested array dropped' => [['5', ['6']], [5]],
+            'out of range dropped' => [['9223372036854775808', '7'], [7]],
+        ];
+    }
+
+    private function CreateFormReadingPage(): object
+    {
+        return new class () extends Page {
+            public function __construct()
+            {
+                $this->server = ServiceLocator::GetServer();
+            }
+
+            public function PageLoad()
+            {
+            }
+
+            public function ReadFormInt(string $key): ?int
+            {
+                return $this->GetFormInt(key: $key);
+            }
+
+            public function ReadFormFloat(string $key): ?float
+            {
+                return $this->GetFormFloat(key: $key);
+            }
+
+            /**
+             * @return int[]
+             */
+            public function ReadFormIntList(string $key): array
+            {
+                return $this->GetFormIntList(key: $key);
+            }
+        };
+    }
 }

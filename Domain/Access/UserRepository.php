@@ -161,8 +161,8 @@ interface IUserViewRepository
     public function GetAll();
 
     /**
-     * @param int $pageNumber
-     * @param int $pageSize
+     * @param int|null $pageNumber null for no paging
+     * @param int|null $pageSize null for no paging
      * @param null|string $sortField
      * @param null|string $sortDirection
      * @param null|ISqlFilter $filter
@@ -745,9 +745,8 @@ class UserRepository implements IUserRepository, IAccountActivationRepository
 
     /**
      * @param $emailAddress string
-     * @return User
      */
-    public function FindByEmail($emailAddress)
+    public function FindByEmail($emailAddress): ?User
     {
         $command = new CheckEmailCommand($emailAddress);
         $reader = ServiceLocator::GetDatabase()->Query($command);
@@ -985,9 +984,9 @@ class UserItemView
     public $CurrentCreditCount;
 
     /**
-     * @var int[]
+     * @var array<int|string> group IDs as returned by the database
      */
-    public $GroupIds = [];
+    public array $GroupIds = [];
 
     public function __construct()
     {

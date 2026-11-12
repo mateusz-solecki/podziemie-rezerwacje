@@ -13,7 +13,7 @@ interface IResource extends IPermissibleResource
     public function GetName();
 
     /**
-     * @return int
+     * @return int|null null when the resource has no admin group
      */
     public function GetAdminGroupId();
 
@@ -69,7 +69,7 @@ interface IBookableResource extends IResource
     public function GetAutoReleaseMinutes();
 
     /**
-     * @return int
+     * @return int|null null when the resource has no type
      */
     public function GetResourceTypeId();
 
@@ -82,418 +82,6 @@ interface IBookableResource extends IResource
      * @return null|string
      */
     public function GetTextColor();
-}
-
-class BookableResourceBuilder
-{
-    private $id;
-    private $name;
-    private $location;
-    private $contact;
-    private $notes;
-    private $minLength;
-    private $maxLength;
-    private $autoAssign;
-    private $requiresApproval = false;
-    private $allowMultiday = false;
-    private $maxParticipants;
-    private $minNoticeAdd;
-    private $minNoticeUpdate;
-    private $minNoticeDelete;
-    private $maxNotice;
-    private $description;
-    private $scheduleId;
-    private $adminGroupId;
-    private $imageName;
-    private $status;
-    private $sortOrder;
-    private $resourceTypeId;
-    private $publicId;
-    private $allowSubscription = false;
-    private $bufferTime;
-    private $color;
-    private $attributeValues = [];
-    private $groupIds = [];
-    private $allowCheckin = false;
-    private $autoReleaseMinutes;
-    private $allowDisplay = false;
-    private $peakCredits;
-    private $offPeakCredits;
-
-    /**
-     * @return BookableResourceBuilder
-     */
-    public static function Create()
-    {
-        return new BookableResourceBuilder();
-    }
-
-    /**
-     * @return BookableResource
-     */
-    public function Build()
-    {
-        $resource = new BookableResource(
-            $this->id,
-            $this->name,
-            $this->location,
-            $this->contact,
-            $this->notes,
-            $this->minLength,
-            $this->maxLength,
-            $this->autoAssign,
-            $this->requiresApproval,
-            $this->allowMultiday,
-            $this->maxParticipants,
-            $this->minNoticeAdd,
-            $this->maxNotice,
-            $this->description,
-            $this->scheduleId,
-            $this->adminGroupId,
-            $this->minNoticeUpdate,
-            $this->minNoticeDelete
-        );
-
-        $resource->SetImage($this->imageName);
-        $resource->ChangeStatus($this->status);
-        $resource->SetSortOrder($this->sortOrder);
-        $resource->SetResourceTypeId($this->resourceTypeId);
-        $resource->WithPublicId($this->publicId);
-        $resource->WithSubscription($this->allowSubscription);
-        $resource->SetBufferTime($this->bufferTime);
-        $resource->SetColor($this->color);
-
-        foreach ($this->attributeValues as $av) {
-            $resource->WithAttribute($av);
-        }
-
-        $resource->SetResourceGroupIds($this->groupIds);
-        $resource->SetCheckin($this->allowCheckin, $this->autoReleaseMinutes);
-
-        if ($this->allowDisplay) {
-            $resource->EnableDisplay();
-        }
-
-        return $resource;
-    }
-
-    /**
-     * @param int $id
-     * @return BookableResourceBuilder
-     */
-    public function Id($id)
-    {
-        $this->id = $id;
-        return $this;
-    }
-
-    /**
-     * @param string $name
-     * @return BookableResourceBuilder
-     */
-    public function Name($name)
-    {
-        $this->name = $name;
-        return $this;
-    }
-
-    /**
-     * @param string $location
-     * @return BookableResourceBuilder
-     */
-    public function Location($location)
-    {
-        $this->location = $location;
-        return $this;
-    }
-
-    /**
-     * @param string $contact
-     * @return BookableResourceBuilder
-     */
-    public function Contact($contact)
-    {
-        $this->contact = $contact;
-        return $this;
-    }
-
-    /**
-     * @param string $notes
-     * @return BookableResourceBuilder
-     */
-    public function Notes($notes)
-    {
-        $this->notes = $notes;
-        return $this;
-    }
-
-    /**
-     * @param string|int|null $minLength
-     * @param string|int|null $maxLength
-     * @return BookableResourceBuilder
-     */
-    public function Length($minLength, $maxLength)
-    {
-        $this->minLength = $minLength;
-        $this->maxLength = $maxLength;
-        return $this;
-    }
-
-    /**
-     * @param bool $autoAssign
-     * @return BookableResourceBuilder
-     */
-    public function AutoAssign($autoAssign)
-    {
-        $this->autoAssign = $autoAssign;
-        return $this;
-    }
-
-    /**
-     * @param bool $requiresApproval
-     * @return BookableResourceBuilder
-     */
-    public function RequiresApproval($requiresApproval)
-    {
-        $this->requiresApproval = $requiresApproval;
-        return $this;
-    }
-
-    /**
-     * @param bool $allowMultiday
-     * @return BookableResourceBuilder
-     */
-    public function AllowMultiday($allowMultiday)
-    {
-        $this->allowMultiday = $allowMultiday;
-        return $this;
-    }
-
-    /**
-     * @param int|null $maxParticipants
-     * @return BookableResourceBuilder
-     */
-    public function MaxParticipants($maxParticipants)
-    {
-        $this->maxParticipants = $maxParticipants;
-        return $this;
-    }
-
-    /**
-     * @param string|int|null $add
-     * @param string|int|null $update
-     * @param string|int|null $delete
-     * @return BookableResourceBuilder
-     */
-    public function MinNotice($add, $update, $delete)
-    {
-        $this->minNoticeAdd = $add;
-        $this->minNoticeUpdate = $update;
-        $this->minNoticeDelete = $delete;
-        return $this;
-    }
-
-    /**
-     * @param string|int|null $maxNotice
-     * @return BookableResourceBuilder
-     */
-    public function MaxNotice($maxNotice)
-    {
-        $this->maxNotice = $maxNotice;
-        return $this;
-    }
-
-    /**
-     * @param string $description
-     * @return BookableResourceBuilder
-     */
-    public function Description($description)
-    {
-        $this->description = $description;
-        return $this;
-    }
-
-    /**
-     * @param int $scheduleId
-     * @return BookableResourceBuilder
-     */
-    public function ScheduleId($scheduleId)
-    {
-        $this->scheduleId = $scheduleId;
-        return $this;
-    }
-
-    /**
-     * @param int $adminGroupId
-     * @return BookableResourceBuilder
-     */
-    public function AdminGroupId($adminGroupId)
-    {
-        $this->adminGroupId = $adminGroupId;
-        return $this;
-    }
-
-    /**
-     * @param string $imageName
-     * @return BookableResourceBuilder
-     */
-    public function ImageName($imageName)
-    {
-        $this->imageName = $imageName;
-        return $this;
-    }
-
-    /**
-     * @param int $sortOrder
-     * @return BookableResourceBuilder
-     */
-    public function SortOrder($sortOrder)
-    {
-        $this->sortOrder = $sortOrder;
-        return $this;
-    }
-
-    /**
-     * @param int $status
-     * @return BookableResourceBuilder
-     */
-    public function Status($status)
-    {
-        $this->status = $status;
-        return $this;
-    }
-
-    /**
-     * @param int $resourceTypeId
-     * @return BookableResourceBuilder
-     */
-    public function ResourceType($resourceTypeId)
-    {
-        $this->resourceTypeId = $resourceTypeId;
-        return $this;
-    }
-
-    /**
-     * @param string $publicId
-     * @return BookableResourceBuilder
-     */
-    public function PublicId($publicId)
-    {
-        $this->publicId = $publicId;
-        return $this;
-    }
-
-    /**
-     * @param bool $allowSubscription
-     * @return BookableResourceBuilder
-     */
-    public function AllowSubscription($allowSubscription)
-    {
-        $this->allowSubscription = $allowSubscription;
-        return $this;
-    }
-
-    /**
-     * @param int|string|null $bufferTime
-     * @return BookableResourceBuilder
-     */
-    public function BufferTime($bufferTime)
-    {
-        $this->bufferTime = $bufferTime;
-        return $this;
-    }
-
-    /**
-     * @param string $color
-     * @return BookableResourceBuilder
-     */
-    public function Color($color)
-    {
-        $this->color = $color;
-        return $this;
-    }
-
-    /**
-     * @param AttributeValue $attributeValue
-     * @return BookableResourceBuilder
-     */
-    public function Attribute($attributeValue)
-    {
-        $this->attributeValues[] = $attributeValue;
-        return $this;
-    }
-
-    /**
-     * @param AttributeValue[] $attributeValues
-     * @return BookableResourceBuilder
-     */
-    public function Attributes($attributeValues)
-    {
-        $this->attributeValues = $attributeValues;
-        return $this;
-    }
-
-    /**
-     * @param int $groupId
-     * @return BookableResourceBuilder
-     */
-    public function GroupId($groupId)
-    {
-        $this->groupIds[] = $groupId;
-        return $this;
-    }
-
-    /**
-     * @param int[] $groupIds
-     * @return BookableResourceBuilder
-     */
-    public function GroupIds($groupIds)
-    {
-        $this->groupIds = $groupIds;
-        return $this;
-    }
-
-    /**
-     * @param bool $allowCheckin
-     * @return BookableResourceBuilder
-     */
-    public function AllowCheckin($allowCheckin)
-    {
-        $this->allowCheckin = $allowCheckin;
-        return $this;
-    }
-
-    /**
-     * @param int $autoReleaseMinutes
-     * @return BookableResourceBuilder
-     */
-    public function AutoReleaseMinutes($autoReleaseMinutes)
-    {
-        $this->autoReleaseMinutes = $autoReleaseMinutes;
-        return $this;
-    }
-
-    /**
-     * @param int $allowDisplay
-     * @return BookableResourceBuilder
-     */
-    public function AllowDisplay($allowDisplay)
-    {
-        $this->allowDisplay = $allowDisplay;
-        return $this;
-    }
-
-    /**
-     * @param int $peak
-     * @param int $offPeak
-     * @return BookableResourceBuilder
-     */
-    public function Credits($peak, $offPeak)
-    {
-        $this->peakCredits = $peak;
-        $this->offPeakCredits = $offPeak;
-        return $this;
-    }
 }
 
 class BookableResource implements IBookableResource
@@ -807,7 +395,7 @@ class BookableResource implements IBookableResource
     }
 
     /**
-     * @param string|int|TimeInterval $value
+     * @param string|int|TimeInterval|null $value null for no limit
      */
     public function SetMinLength($value)
     {
@@ -904,7 +492,7 @@ class BookableResource implements IBookableResource
     }
 
     /**
-     * @param string|int|TimeInterval $value
+     * @param string|int|TimeInterval|null $value null for no limit
      */
     public function SetMaxLength($value)
     {
@@ -995,7 +583,7 @@ class BookableResource implements IBookableResource
     }
 
     /**
-     * @return int
+     * @return int|null null when there is no participant limit
      */
     public function GetMaxParticipants()
     {
@@ -1003,7 +591,7 @@ class BookableResource implements IBookableResource
     }
 
     /**
-     * @param int $value
+     * @param int|null $value null or 0 for no participant limit
      */
     public function SetMaxParticipants($value)
     {
@@ -1030,7 +618,7 @@ class BookableResource implements IBookableResource
     }
 
     /**
-     * @param string|int|TimeInterval $value
+     * @param string|int|TimeInterval|null $value null for no limit
      */
     public function SetMinNoticeAdd($value)
     {
@@ -1054,7 +642,7 @@ class BookableResource implements IBookableResource
     }
 
     /**
-     * @param string|int|TimeInterval $value
+     * @param string|int|TimeInterval|null $value null for no limit
      */
     public function SetMinNoticeUpdate($value)
     {
@@ -1078,7 +666,7 @@ class BookableResource implements IBookableResource
     }
 
     /**
-     * @param string|int|TimeInterval $value
+     * @param string|int|TimeInterval|null $value null for no limit
      */
     public function SetMinNoticeDelete($value)
     {
@@ -1102,7 +690,7 @@ class BookableResource implements IBookableResource
     }
 
     /**
-     * @param string|int|TimeInterval $value
+     * @param string|int|TimeInterval|null $value null for no limit
      */
     public function SetMaxNotice($value)
     {
@@ -1135,7 +723,7 @@ class BookableResource implements IBookableResource
     }
 
     /**
-     * @return int
+     * @return int|null null when the resource has no admin group
      */
     public function GetAdminGroupId()
     {
@@ -1143,7 +731,7 @@ class BookableResource implements IBookableResource
     }
 
     /**
-     * @param int $adminGroupId
+     * @param int|null $adminGroupId null or 0 for no admin group
      */
     public function SetAdminGroupId($adminGroupId)
     {
@@ -1170,7 +758,7 @@ class BookableResource implements IBookableResource
     }
 
     /**
-     * @param string $value
+     * @param string|null $value null removes the image, e.g. when copying a resource
      * @return void
      */
     public function SetImage($value)
@@ -1509,7 +1097,7 @@ class BookableResource implements IBookableResource
     }
 
     /**
-     * @param int $resourceTypeId
+     * @param int|null $resourceTypeId null for no resource type
      */
     public function SetResourceTypeId($resourceTypeId)
     {
@@ -1517,7 +1105,7 @@ class BookableResource implements IBookableResource
     }
 
     /**
-     * @return int
+     * @return int|null null when the resource has no type
      */
     public function GetResourceTypeId()
     {

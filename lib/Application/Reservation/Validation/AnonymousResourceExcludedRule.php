@@ -20,7 +20,7 @@ class AnonymousResourceExcludedRule implements IReservationValidationRule
     public function Validate($reservationSeries, $retryParameters)
     {
         if ($this->session->IsLoggedIn()) {
-            return new ReservationRuleResult(true);
+            return $this->rule->Validate($reservationSeries, $retryParameters);
         }
 
         foreach ($reservationSeries->AllResources() as $resource) {
@@ -29,6 +29,9 @@ class AnonymousResourceExcludedRule implements IReservationValidationRule
             }
         }
 
-        return new ReservationRuleResult(false);
+        return new ReservationRuleResult(
+            isValid: false,
+            errorMessage: Resources::GetInstance()->GetString('NoResourcePermission')
+        );
     }
 }

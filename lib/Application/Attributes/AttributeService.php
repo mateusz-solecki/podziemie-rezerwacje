@@ -39,9 +39,9 @@ interface IAttributeService
      * @param ReservationView $reservationView
      * @param int $requestedUserId
      * @param int[] $requestedResourceIds
-     * @return Attribute[]
+     * @return LBAttribute[]
      */
-    public function GetReservationAttributes(UserSession $userSession, ReservationView $reservationView, $requestedUserId = 0, $requestedResourceIds = []);
+    public function GetReservationAttributes(UserSession $userSession, ReservationView $reservationView, $requestedUserId = 0, $requestedResourceIds = []): array;
 }
 
 class AttributeService implements IAttributeService
@@ -214,7 +214,7 @@ class AttributeService implements IAttributeService
         return $this->attributeRepository->LoadById($attributeId);
     }
 
-    public function GetReservationAttributes(UserSession $userSession, ReservationView $reservationView, $requestedUserId = 0, $requestedResourceIds = [])
+    public function GetReservationAttributes(UserSession $userSession, ReservationView $reservationView, $requestedUserId = 0, $requestedResourceIds = []): array
     {
         if ($requestedUserId == 0) {
             $requestedUserId = $reservationView->OwnerId;
@@ -237,8 +237,8 @@ class AttributeService implements IAttributeService
                             && $this->AvailableForResource($userSession, $secondaryCategory, $attribute, $requestedResourceIds))
                     )
             ) {
-                $viewableForPrivate = (!$attribute->IsPrivate() || ($attribute->IsPrivate() && $this->CanReserveFor($userSession, $requestedUserId)));
-                $viewableForAdmin = (!$attribute->AdminOnly() || ($attribute->AdminOnly() && $this->GetAuthorizationService()->IsAdminFor($userSession, $requestedUserId)));
+                $viewableForPrivate = !$attribute->IsPrivate() || $this->CanReserveFor($userSession, $requestedUserId);
+                $viewableForAdmin = !$attribute->AdminOnly() || $this->GetAuthorizationService()->IsAdminFor($userSession, $requestedUserId);
                 if ($viewableForPrivate && $viewableForAdmin) {
                     $attributes[] = new LBAttribute($attribute, $reservationView->GetAttributeValue($attribute->Id()));
                 }
@@ -256,7 +256,7 @@ class AttributeService implements IAttributeService
     /**
      * @param UserSession $userSession
      * @param int $requestedUserId
-     * @param string $secondaryCategory
+     * @param CustomAttributeCategory|int $secondaryCategory
      * @param CustomAttribute $attribute
      * @return bool
      */
@@ -269,7 +269,7 @@ class AttributeService implements IAttributeService
 
     /**
      * @param UserSession $userSession
-     * @param string $secondaryCategory
+     * @param CustomAttributeCategory|int $secondaryCategory
      * @param CustomAttribute $attribute
      * @param int[] $requestedResourceIds
      * @return bool
@@ -323,10 +323,7 @@ class AttributeService implements IAttributeService
 
 class AttributeServiceValidationResult
 {
-    /**
-     * @var int
-     */
-    private $isValid;
+    private bool $isValid;
 
     /**
      * @var string[]
@@ -339,21 +336,17 @@ class AttributeServiceValidationResult
     private $invalidAttributes;
 
     /**
-     * @param int $isValid
      * @param string[] $errors
      * @param InvalidAttribute[] $invalidAttributes
      */
-    public function __construct($isValid, $errors, $invalidAttributes = [])
+    public function __construct(bool $isValid, $errors, $invalidAttributes = [])
     {
         $this->isValid = $isValid;
         $this->errors = $errors;
         $this->invalidAttributes = $invalidAttributes;
     }
 
-    /**
-     * @return int
-     */
-    public function IsValid()
+    public function IsValid(): bool
     {
         return $this->isValid;
     }

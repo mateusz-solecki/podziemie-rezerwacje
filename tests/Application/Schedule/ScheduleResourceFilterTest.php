@@ -57,6 +57,68 @@ class ScheduleResourceFilterTest extends TestBase
         $this->assertEquals($resourceId, $resourceIds[0]);
     }
 
+    public function testConvertsResourceIdsToInts()
+    {
+        $filter = new ScheduleResourceFilter(resourceIds: ['3', '10', 7]);
+
+        $this->assertSame([3, 10, 7], $filter->ResourceIds);
+    }
+
+    public function testDropsResourceIdsThatAreNotPositiveWholeNumbers()
+    {
+        $filter = new ScheduleResourceFilter(
+            resourceIds: ['1,2', 'abc', '', '0', '-4', '5x', ' 6', '1.5', ['9'], null, '8']
+        );
+
+        $this->assertSame([8], $filter->ResourceIds);
+    }
+
+    public function testConvertsResourceIdsLoadedFromCookie()
+    {
+        $cookie = json_decode(
+            json: '{"ScheduleId":1,"ResourceTypeId":null,"MinCapacity":null,'
+                . '"ResourceAttributes":[],"ResourceTypeAttributes":[],'
+                . '"ResourceIds":["4","2,3",5]}'
+        );
+
+        $filter = ScheduleResourceFilter::FromCookie($cookie);
+
+        $this->assertSame([4, 5], $filter->ResourceIds);
+    }
+
+    public function testConvertsResourceTypeAndCapacityLoadedFromCookie()
+    {
+        $cookie = json_decode(
+            json: '{"ScheduleId":1,"ResourceTypeId":"3","MinCapacity":"12",'
+                . '"ResourceAttributes":[],"ResourceTypeAttributes":[],"ResourceIds":[]}'
+        );
+
+        $filter = ScheduleResourceFilter::FromCookie($cookie);
+
+        $this->assertSame(3, $filter->ResourceTypeId);
+        $this->assertSame(12, $filter->MinCapacity);
+    }
+
+    public function testDropsResourceTypeAndCapacityThatAreNotPositiveWholeNumbers()
+    {
+        $cookie = json_decode(
+            json: '{"ScheduleId":1,"ResourceTypeId":"3x","MinCapacity":"-1",'
+                . '"ResourceAttributes":[],"ResourceTypeAttributes":[],"ResourceIds":[]}'
+        );
+
+        $filter = ScheduleResourceFilter::FromCookie($cookie);
+
+        $this->assertNull($filter->ResourceTypeId);
+        $this->assertNull($filter->MinCapacity);
+        $this->assertFalse($filter->HasFilter());
+    }
+
+    public function testResourceIdsMustBeAnArray()
+    {
+        $this->assertSame([], ScheduleResourceFilter::ToResourceIds(values: '4'));
+        $this->assertSame([], ScheduleResourceFilter::ToResourceIds(values: null));
+    }
+
     public function testFiltersByMinCapacity()
     {
         $minCapacity = 10;
@@ -117,10 +179,10 @@ class ScheduleResourceFilterTest extends TestBase
         $resourceId = 4;
 
         $attributeList = new FakeAttributeList();
-        $attributeList->Add($resourceId, new LBAttribute(new CustomAttribute($attributeId1, '', CustomAttributeTypes::CHECKBOX, CustomAttributeCategory::RESOURCE, '', false, '', 0, $resourceId), $attributeValue1));
-        $attributeList->Add($resourceId, new LBAttribute(new CustomAttribute($attributeId2, '', CustomAttributeTypes::MULTI_LINE_TEXTBOX, CustomAttributeCategory::RESOURCE, '', false, '', 0, $resourceId), $attributeValue2));
-        $attributeList->Add(1, new LBAttribute(new CustomAttribute($attributeId2, '', CustomAttributeTypes::MULTI_LINE_TEXTBOX, CustomAttributeCategory::RESOURCE, '', false, '', 0, 1), $attributeValue2));
-        $attributeList->Add(3, new LBAttribute(new CustomAttribute($attributeId2, '', CustomAttributeTypes::MULTI_LINE_TEXTBOX, CustomAttributeCategory::RESOURCE, '', false, '', 0, 3), $attributeValue2));
+        $attributeList->Add($resourceId, new LBAttribute(new CustomAttribute($attributeId1, '', CustomAttributeTypes::CHECKBOX, CustomAttributeCategory::RESOURCE, '', false, '', 0, [$resourceId]), $attributeValue1));
+        $attributeList->Add($resourceId, new LBAttribute(new CustomAttribute($attributeId2, '', CustomAttributeTypes::MULTI_LINE_TEXTBOX, CustomAttributeCategory::RESOURCE, '', false, '', 0, [$resourceId]), $attributeValue2));
+        $attributeList->Add(1, new LBAttribute(new CustomAttribute($attributeId2, '', CustomAttributeTypes::MULTI_LINE_TEXTBOX, CustomAttributeCategory::RESOURCE, '', false, '', 0, [1]), $attributeValue2));
+        $attributeList->Add(3, new LBAttribute(new CustomAttribute($attributeId2, '', CustomAttributeTypes::MULTI_LINE_TEXTBOX, CustomAttributeCategory::RESOURCE, '', false, '', 0, [3]), $attributeValue2));
 
         $this->attributeService->expects($this->once())
         ->method('GetAttributes')
@@ -157,10 +219,10 @@ class ScheduleResourceFilterTest extends TestBase
         $resourceTypeId = 4;
 
         $attributeList = new FakeAttributeList();
-        $attributeList->Add($resourceTypeId, new LBAttribute(new CustomAttribute($attributeId1, '', CustomAttributeTypes::CHECKBOX, CustomAttributeCategory::RESOURCE, '', false, '', 0, $resourceTypeId), $attributeValue1));
-        $attributeList->Add($resourceTypeId, new LBAttribute(new CustomAttribute($attributeId2, '', CustomAttributeTypes::MULTI_LINE_TEXTBOX, CustomAttributeCategory::RESOURCE, '', false, '', 0, $resourceTypeId), $attributeValue2));
-        $attributeList->Add(1, new LBAttribute(new CustomAttribute($attributeId2, '', CustomAttributeTypes::MULTI_LINE_TEXTBOX, CustomAttributeCategory::RESOURCE, '', false, '', 0, 1), $attributeValue2));
-        $attributeList->Add(3, new LBAttribute(new CustomAttribute($attributeId2, '', CustomAttributeTypes::MULTI_LINE_TEXTBOX, CustomAttributeCategory::RESOURCE, '', false, '', 0, 3), $attributeValue2));
+        $attributeList->Add($resourceTypeId, new LBAttribute(new CustomAttribute($attributeId1, '', CustomAttributeTypes::CHECKBOX, CustomAttributeCategory::RESOURCE, '', false, '', 0, [$resourceTypeId]), $attributeValue1));
+        $attributeList->Add($resourceTypeId, new LBAttribute(new CustomAttribute($attributeId2, '', CustomAttributeTypes::MULTI_LINE_TEXTBOX, CustomAttributeCategory::RESOURCE, '', false, '', 0, [$resourceTypeId]), $attributeValue2));
+        $attributeList->Add(1, new LBAttribute(new CustomAttribute($attributeId2, '', CustomAttributeTypes::MULTI_LINE_TEXTBOX, CustomAttributeCategory::RESOURCE, '', false, '', 0, [1]), $attributeValue2));
+        $attributeList->Add(3, new LBAttribute(new CustomAttribute($attributeId2, '', CustomAttributeTypes::MULTI_LINE_TEXTBOX, CustomAttributeCategory::RESOURCE, '', false, '', 0, [3]), $attributeValue2));
 
         $this->attributeService->expects($this->once())
         ->method('GetAttributes')

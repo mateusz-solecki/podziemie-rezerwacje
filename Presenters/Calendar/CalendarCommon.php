@@ -82,20 +82,11 @@ interface ICommonCalendarPage extends IActionPage
      */
     public function BindFilters($filters);
 
-    /**
-     * @return null|int
-     */
-    public function GetScheduleId();
+    public function GetScheduleId(): ?int;
 
-    /**
-     * @return null|int
-     */
-    public function GetResourceId();
+    public function GetResourceId(): ?int;
 
-    /**
-     * @return null|int
-     */
-    public function GetGroupId();
+    public function GetGroupId(): ?int;
 
     /**
      * @param $scheduleId null|int
@@ -109,15 +100,9 @@ interface ICommonCalendarPage extends IActionPage
 
     public function RenderSubscriptionDetails();
 
-    /**
-     * @return null|int
-     */
-    public function GetUserId();
+    public function GetUserId(): ?int;
 
-    /**
-     * @return null|int
-     */
-    public function GetParticipantId();
+    public function GetParticipantId(): ?int;
 }
 
 abstract class CommonCalendarPage extends ActionPage implements ICommonCalendarPage
@@ -180,29 +165,29 @@ abstract class CommonCalendarPage extends ActionPage implements ICommonCalendarP
         ;
     }
 
-    public function GetScheduleId()
+    public function GetScheduleId(): ?int
     {
-        return $this->GetQuerystring(QueryStringKeys::SCHEDULE_ID);
+        return $this->GetQuerystringInt(key: QueryStringKeys::SCHEDULE_ID);
     }
 
-    public function GetResourceId()
+    public function GetResourceId(): ?int
     {
-        return $this->GetQuerystring(QueryStringKeys::RESOURCE_ID);
+        return $this->GetQuerystringInt(key: QueryStringKeys::RESOURCE_ID);
     }
 
-    public function GetGroupId()
+    public function GetGroupId(): ?int
     {
-        return $this->GetQuerystring(QueryStringKeys::GROUP_ID);
+        return $this->GetQuerystringInt(key: QueryStringKeys::GROUP_ID);
     }
 
-    public function GetUserId()
+    public function GetUserId(): ?int
     {
-        return $this->GetQuerystring(QueryStringKeys::USER_ID);
+        return $this->GetQuerystringInt(key: QueryStringKeys::USER_ID);
     }
 
-    public function GetParticipantId()
+    public function GetParticipantId(): ?int
     {
-        return $this->GetQuerystring(QueryStringKeys::PARTICIPANT_ID);
+        return $this->GetQuerystringInt(key: QueryStringKeys::PARTICIPANT_ID);
     }
 
     /**
@@ -404,18 +389,25 @@ abstract class CommonCalendarPresenter extends ActionPresenter
         $selectedUserId = $this->page->GetUserId();
         $selectedParticipantId = $this->page->GetParticipantId();
 
+        // A selected group shows events for all of its resources, but the saved
+        // filter keeps the group itself so it can be restored on the next visit.
+        $eventResourceIds = $selectedResourceId;
         if (!empty($selectedGroupId)) {
             $resourceGroups = $this->resourceService->GetResourceGroups($selectedScheduleId, $userSession);
-            $selectedResourceId = $resourceGroups->GetResourceIds($selectedGroupId);
+            $eventResourceIds = $resourceGroups->GetResourceIds($selectedGroupId);
         }
 
         if ($userSession->UserId != 0) {
             $user = $this->userRepository->LoadById($userSession->UserId);
-            $userCalendarFilter = new UserCalendarFilter($selectedResourceId, $selectedScheduleId, $selectedGroupId);
+            $userCalendarFilter = new UserCalendarFilter(
+                resourceId: $selectedResourceId,
+                scheduleId: $selectedScheduleId,
+                groupId: $selectedGroupId,
+            );
             $user->ChangePreference(UserPreferences::CALENDAR_FILTER, $userCalendarFilter->Serialize());
             $this->userRepository->Update($user);
         }
-        $this->BindEvents($userSession, $selectedScheduleId, $selectedResourceId, $selectedUserId, $selectedParticipantId);
+        $this->BindEvents($userSession, $selectedScheduleId, $eventResourceIds, $selectedUserId, $selectedParticipantId);
     }
 
     public function ProcessDataRequest($dataRequest)
@@ -505,35 +497,41 @@ abstract class CommonCalendarPresenter extends ActionPresenter
 
 class UserCalendarFilter
 {
-    public $ResourceId;
-    public $ScheduleId;
-    public $GroupId;
+    public ?int $ResourceId;
+    public ?int $ScheduleId;
+    public ?int $GroupId;
 
-    public function __construct($resourceId, $scheduleId, $groupId)
+    public function __construct(?int $resourceId, ?int $scheduleId, ?int $groupId)
     {
         $this->ResourceId = $resourceId;
         $this->ScheduleId = $scheduleId;
         $this->GroupId = $groupId;
     }
 
-    /**
-     * @return string
-     */
-    public function Serialize()
+    public function Serialize(): string
     {
         return "{$this->ResourceId}|{$this->ScheduleId}|{$this->GroupId}";
     }
 
-    /**
-     * @param string $string
-     * @return UserCalendarFilter
-     */
-    public static function Deserialize($string)
+    public static function Deserialize(?string $string): UserCalendarFilter
     {
         $parts = explode('|', $string ?? '');
-        $resourceId = isset($parts[0]) ? $parts[0] : null;
-        $scheduleId = isset($parts[1]) ? $parts[1] : null;
-        $groupId = isset($parts[2]) ? $parts[2] : null;
-        return new UserCalendarFilter($resourceId, $scheduleId, $groupId);
+
+        return new UserCalendarFilter(
+            resourceId: self::ParseId($parts[0] ?? null),
+            scheduleId: self::ParseId($parts[1] ?? null),
+            groupId: self::ParseId($parts[2] ?? null),
+        );
+    }
+
+    /**
+     * Stored filters written before the group fix can contain "Array" as the
+     * resource ID, so anything that is not a positive integer becomes null.
+     */
+    private static function ParseId(?string $value): ?int
+    {
+        $id = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+
+        return $id === false ? null : $id;
     }
 }

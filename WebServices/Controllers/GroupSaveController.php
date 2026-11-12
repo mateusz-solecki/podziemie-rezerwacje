@@ -358,9 +358,9 @@ abstract class GroupControllerPageFacade implements IManageGroupsPage
         return null;
     }
 
-    public function AutomaticallyAddToGroup(): ?bool
+    public function AutomaticallyAddToGroup(): bool
     {
-        return null;
+        return false;
     }
 
     public function GetUserIds(): array
@@ -396,7 +396,7 @@ abstract class GroupControllerPageFacade implements IManageGroupsPage
 class CreateGroupFacade extends GroupControllerPageFacade
 {
     /**
-     * @param GroupRequest $request
+     * @param GroupRequest|null $request null when deleting, which only needs the id
      * @param int|null $id
      */
     public function __construct(private $request, private $id = null)
@@ -410,12 +410,13 @@ class CreateGroupFacade extends GroupControllerPageFacade
 
     public function GetGroupName(): ?string
     {
-        return $this->request->name;
+        return $this->request?->name;
     }
 
-    public function AutomaticallyAddToGroup(): ?bool
+    public function AutomaticallyAddToGroup(): bool
     {
-        return $this->request->isDefault;
+        // The request is the decoded JSON body, so isDefault may be missing or null
+        return $this->request->isDefault ?? false;
     }
 
     /**

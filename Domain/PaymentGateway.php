@@ -18,13 +18,13 @@ class PaymentGatewaySetting
      */
     private $name;
     /**
-     * @var string
+     * @var string|null null for a disabled gateway, whose settings are not saved
      */
     private $value;
 
     /**
      * @param string $name
-     * @param string $value
+     * @param string|null $value null for a disabled gateway
      */
     public function __construct($name, $value)
     {
@@ -41,7 +41,7 @@ class PaymentGatewaySetting
     }
 
     /**
-     * @return string
+     * @return string|null null for a disabled gateway
      */
     public function Value()
     {
@@ -73,14 +73,14 @@ interface IPaymentTransactionLogger
      * @param string $userId
      * @param string $status
      * @param string $invoiceNumber
-     * @param int $transactionId
+     * @param string $transactionId the gateway's transaction id
      * @param float $totalAmount
      * @param float $transactionFee
      * @param string $currency
-     * @param string $transactionHref
-     * @param string $refundHref
+     * @param string|null $transactionHref
+     * @param string|null $refundHref
      * @param Date $dateCreated
-     * @param string $gatewayDateCreated
+     * @param string|int $gatewayDateCreated as reported by the gateway; a Unix timestamp from Stripe
      * @param string $gatewayName
      * @param string $gatewayResponse
      */
@@ -101,15 +101,15 @@ interface IPaymentTransactionLogger
     );
 
     /**
-     * @param string $paymentTransactionLogId
+     * @param int $paymentTransactionLogId id of the logged payment being refunded
      * @param string $status
-     * @param int $transactionId
+     * @param string $transactionId the gateway's refund transaction id
      * @param float $totalRefundAmount
      * @param float $paymentRefundAmount
      * @param float $feeRefundAmount
-     * @param string $transactionHref
+     * @param string|null $transactionHref
      * @param Date $dateCreated
-     * @param string $gatewayDateCreated
+     * @param string|int $gatewayDateCreated as reported by the gateway; a Unix timestamp from Stripe
      * @param string $refundResponse
      */
     public function LogRefund(
@@ -201,23 +201,23 @@ class PayPalGateway implements IPaymentGateway
      */
     private $enabled;
     /**
-     * @var string
+     * @var string|null null when the gateway is disabled
      */
     private $clientId;
     /**
-     * @var string
+     * @var string|null null when the gateway is disabled
      */
     private $secret;
     /**
-     * @var string
+     * @var string|null null when the gateway is disabled
      */
     private $environment;
 
     /**
      * @param bool $enabled
-     * @param string $clientId
-     * @param string $secret
-     * @param string $environment
+     * @param string|null $clientId ignored when the gateway is disabled
+     * @param string|null $secret ignored when the gateway is disabled
+     * @param string|null $environment ignored when the gateway is disabled
      */
     public function __construct($enabled, $clientId, $secret, $environment)
     {
@@ -261,7 +261,7 @@ class PayPalGateway implements IPaymentGateway
     }
 
     /**
-     * @return string
+     * @return string|null null when the gateway is disabled
      */
     public function ClientId()
     {
@@ -269,7 +269,7 @@ class PayPalGateway implements IPaymentGateway
     }
 
     /**
-     * @return string
+     * @return string|null null when the gateway is disabled
      */
     public function Secret()
     {
@@ -277,7 +277,7 @@ class PayPalGateway implements IPaymentGateway
     }
 
     /**
-     * @return string
+     * @return string|null null when the gateway is disabled
      */
     public function Environment()
     {
@@ -311,7 +311,8 @@ class PayPalGateway implements IPaymentGateway
      * @param CreditCartSession $cart
      * @param string $returnUrl
      * @param string $cancelUrl
-     * @return object
+     * @return object|string|null decoded JSON response body, the raw body when
+     *                            it is not valid JSON, or null when the request fails
      */
     public function CreatePayment(CreditCartSession $cart, $returnUrl, $cancelUrl)
     {
@@ -357,7 +358,8 @@ class PayPalGateway implements IPaymentGateway
      * @param string $paymentId
      * @param string $payerId
      * @param IPaymentTransactionLogger $logger
-     * @return object
+     * @return object|string|null decoded JSON response body, the raw body when
+     *                            it is not valid JSON, or null when the request fails
      */
     public function ExecutePayment(CreditCartSession $cart, $paymentId, $payerId, IPaymentTransactionLogger $logger)
     {
@@ -416,7 +418,8 @@ class PayPalGateway implements IPaymentGateway
      * @param TransactionLogView $log
      * @param float $amount
      * @param IPaymentTransactionLogger $logger
-     * @return object
+     * @return object|string|null decoded JSON response body, the raw body when
+     *                            it is not valid JSON, or null when the request fails
      */
     public function Refund(TransactionLogView $log, $amount, IPaymentTransactionLogger $logger)
     {
@@ -478,11 +481,11 @@ class StripeGateway implements IPaymentGateway
      */
     private $enabled;
     /**
-     * @var string
+     * @var string|null null when the gateway is disabled
      */
     private $publishableKey;
     /**
-     * @var string
+     * @var string|null null when the gateway is disabled
      */
     private $secretKey;
     /**
@@ -500,8 +503,8 @@ class StripeGateway implements IPaymentGateway
 
     /**
      * @param bool $enabled
-     * @param string $publishableKey
-     * @param string $secretKey
+     * @param string|null $publishableKey ignored when the gateway is disabled
+     * @param string|null $secretKey ignored when the gateway is disabled
      */
     public function __construct($enabled, $publishableKey, $secretKey)
     {
@@ -542,7 +545,7 @@ class StripeGateway implements IPaymentGateway
     }
 
     /**
-     * @return string
+     * @return string|null null when the gateway is disabled
      */
     public function PublishableKey()
     {
@@ -550,7 +553,7 @@ class StripeGateway implements IPaymentGateway
     }
 
     /**
-     * @return string
+     * @return string|null null when the gateway is disabled
      */
     public function SecretKey()
     {

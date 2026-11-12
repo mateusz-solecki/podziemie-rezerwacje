@@ -736,32 +736,34 @@ function Schedule(opts, resourceGroups) {
   };
 
   this.initNavigation = function () {
-    //var datePicker = $("#datepicker");
-    var expandCalendar = readCookie('schedule_calendar_toggle');
+    const CALENDAR_PANELS = ['datepicker', 'individualDates'];
+    const datepicker = document.getElementById(CALENDAR_PANELS[0]);
+    const expandCalendar = readCookie('schedule_calendar_toggle');
 
     function collapse() {
       createCookie('schedule_calendar_toggle', false, 30, opts.scriptUrl);
-      $('#datepicker').collapse('hide');
-      $('#individualDates').collapse('hide');
+      CALENDAR_PANELS.forEach((id) => {
+        getCollapseInstance(document.getElementById(id)).hide();
+      });
     }
 
     function expand() {
       createCookie('schedule_calendar_toggle', true, 30, opts.scriptUrl);
-      $('#datepicker').collapse('show');
-      $('#individualDates').collapse('show');
+      CALENDAR_PANELS.forEach((id) => {
+        getCollapseInstance(document.getElementById(id)).show();
+      });
     }
 
-    if (expandCalendar == 'true') {
+    if (expandCalendar === 'true') {
       expand();
     } else {
       collapse();
     }
 
-    $('#calendar_toggle').click(function (event) {
+    document.getElementById('calendar_toggle').addEventListener('click', (event) => {
       event.preventDefault();
 
-      if ($('#datepicker').css('display') == 'none') {
-        //Change verification method
+      if (!datepicker.classList.contains('show')) {
         expand();
       } else {
         collapse();
@@ -1240,18 +1242,6 @@ function RemoveResourceId(url) {
 
 function RemoveGroupId(url) {
   return url.replace(/&*gid=\d+/i, '');
-}
-
-// Names are stored entity-encoded (e.g. &#039;); jqTree escapes again, so decode once to plain text.
-function decodeNames(nodes) {
-  return _.map(nodes, function (n) {
-    const copy = _.extend({}, n);
-    _.each(['name', 'label'], function (k) {
-      if (typeof copy[k] === 'string') copy[k] = HtmlDecode(copy[k]);
-    });
-    if (n.children) copy.children = decodeNames(n.children);
-    return copy;
-  });
 }
 
 function ChangeGroup(node) {

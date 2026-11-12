@@ -32,8 +32,8 @@ interface IGroupRepository
 interface IGroupViewRepository
 {
     /**
-     * @param int $pageNumber
-     * @param int $pageSize
+     * @param int|null $pageNumber null for no paging
+     * @param int|null $pageSize null for no paging
      * @param string $sortField
      * @param string $sortDirection
      * @param ISqlFilter $filter
@@ -49,9 +49,9 @@ interface IGroupViewRepository
 
     /**
      * @param int|array|int[] $groupIds
-     * @param int $pageNumber
-     * @param int $pageSize
-     * @param ISqlFilter $filter
+     * @param int|null $pageNumber
+     * @param int|null $pageSize
+     * @param ISqlFilter|null $filter
      * @param AccountStatus|int $accountStatus
      * @return PageableData|UserItemView[]
      */
@@ -88,8 +88,8 @@ class GroupRepository implements IGroupRepository, IGroupViewRepository
     }
 
     /**
-     * @param int $pageNumber
-     * @param int $pageSize
+     * @param int|null $pageNumber null for no paging
+     * @param int|null $pageSize null for no paging
      * @param string $sortField
      * @param string $sortDirection
      * @param ISqlFilter $filter
@@ -114,9 +114,9 @@ class GroupRepository implements IGroupRepository, IGroupViewRepository
 
     /**
      * @param array|int|int[] $groupIds
-     * @param null $pageNumber
-     * @param null $pageSize
-     * @param null $filter
+     * @param int|null $pageNumber
+     * @param int|null $pageSize
+     * @param ISqlFilter|null $filter
      * @param AccountStatus|int $accountStatus
      * @return PageableData|UserItemView[]
      */
@@ -148,7 +148,11 @@ class GroupRepository implements IGroupRepository, IGroupViewRepository
 
         $reader = $db->Query(new GetGroupByIdCommand($groupId));
         if ($row = $reader->GetRow()) {
-            $group = new Group($row[ColumnNames::GROUP_ID], $row[ColumnNames::GROUP_NAME], $row[ColumnNames::GROUP_ISDEFAULT]);
+            $group = new Group(
+                id: $row[ColumnNames::GROUP_ID],
+                name: $row[ColumnNames::GROUP_NAME],
+                isDefault: (bool) intval($row[ColumnNames::GROUP_ISDEFAULT])
+            );
             $group->WithGroupAdmin($row[ColumnNames::GROUP_ADMIN_GROUP_ID]);
         }
         $reader->Free();

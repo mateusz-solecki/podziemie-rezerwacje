@@ -20,17 +20,13 @@ interface IConfiguration extends IConfigurationFile
      */
     public function Register($configFile, $envFile, $configId, $overwrite = false, $configKeysClass = null);
 
-    /**
-     * @param string $configId
-     * @return Configuration
-     */
-    public function File($configId);
+    public function File(string $configId): ConfigurationFile;
 }
 
 interface IConfigurationFile
 {
     /**
-     * @param array $name
+     * @param ConfigKey|array $name a ConfigKeys definition
      * @param null|IConvert $converter
      * @return mixed|string
      */
@@ -79,9 +75,9 @@ interface IConfigurationFile
 class Configuration implements IConfiguration
 {
     /**
-     * @var array|Configuration[]
+     * @var array<string, ConfigurationFile>
      */
-    protected $_configs = [];
+    protected array $_configs = [];
 
     /**
      * @var Configuration
@@ -145,6 +141,7 @@ class Configuration implements IConfiguration
         }
 
         // Load Legacy-style config, mutated $conf during require
+        /** @var array<string, mixed> $conf */
         $conf = [];
         $loadedConfig = @require $configFile;
 
@@ -163,10 +160,8 @@ class Configuration implements IConfiguration
 
     /**
      * Returns the configuration file for the given configId.
-     * @param string $configId
-     * @return ConfigurationFile
      */
-    public function File($configId)
+    public function File(string $configId): ConfigurationFile
     {
         return $this->_configs[$configId];
     }
@@ -200,7 +195,7 @@ class Configuration implements IConfiguration
 
     /**
      * Returns the value of a configuration key.
-     * @param array|string $configDef The key name or configuration definition.
+     * @param ConfigKey|array $configDef The configuration definition, e.g. a ConfigKeys constant.
      * @param null|IConvert $converter Optional converter for the value.
      * @return mixed|string The configuration value.
      * @throws InvalidArgumentException If the config definition is not found.
@@ -510,7 +505,7 @@ class ConfigurationFile implements IConfigurationFile
      * If the section is specified, it retrieves the value from that section.
      * If no section is specified, it retrieves the value from the global configuration.
      *
-     * @param array $configDef The configuration definition containing 'key' and optional 'section'.
+     * @param ConfigKey|array $configDef The configuration definition; an array contains 'key' and optional 'section'.
      * @param null|IConvert $converter Optional converter for the value.
      * @return mixed|string The converted configuration value.
      * @throws InvalidArgumentException If the config definition is not found.

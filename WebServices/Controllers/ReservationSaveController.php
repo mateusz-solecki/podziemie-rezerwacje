@@ -207,8 +207,8 @@ class ReservationSaveController implements IReservationSaveController
             }
 
             if (!empty($repeatType) && $repeatType != RepeatType::None) {
-                $repeatInterval = $request->GetRepeatInterval();
-                if (empty($repeatInterval)) {
+                $parsedInterval = RepeatOptionsAbstract::ParseInterval($request->GetRepeatInterval());
+                if ($parsedInterval === null || $parsedInterval < 1) {
                     $errors[] = 'Missing or invalid repeatInterval';
                 }
 
@@ -368,26 +368,6 @@ class ReservationRequestResponseFacade implements IReservationSavePage
     private $recurrenceRule;
 
     /**
-     * @var bool
-     */
-    private $_canBeRetried;
-
-    /**
-     * @var ReservationRetryParameter[]
-     */
-    private $_retryParameters = [];
-
-    /**
-     * @var string[]
-     */
-    private $_retryMessages = [];
-
-    /**
-     * @var bool
-     */
-    private $_canJoinWaitlist = false;
-
-    /**
      * @param ReservationRequest $request
      * @param WebServiceUserSession $session
      */
@@ -434,10 +414,16 @@ class ReservationRequestResponseFacade implements IReservationSavePage
 
     public function GetRepeatInterval()
     {
-        if (!empty($this->recurrenceRule->interval)) {
-            return (string)intval($this->recurrenceRule->interval);
+        $interval = $this->recurrenceRule->interval ?? null;
+        if ($interval === null || $interval === '') {
+            return null;
         }
-        return null;
+
+        // Pass the value on unchanged so validation rejects anything that is
+        // not an integer, such as "2abc", instead of truncating it. Any other
+        // type (a float, bool, array or object) is not a usable interval, so
+        // return null and let validation reject it.
+        return is_int($interval) || is_string($interval) ? (string)$interval : null;
     }
 
     public function GetRepeatWeekdays()
@@ -682,7 +668,7 @@ class ReservationRequestResponseFacade implements IReservationSavePage
      */
     public function SetCanBeRetried($canBeRetried)
     {
-        $this->_canBeRetried = $canBeRetried;
+        // The API response does not report whether a request can be retried.
     }
 
     /**
@@ -690,7 +676,7 @@ class ReservationRequestResponseFacade implements IReservationSavePage
      */
     public function SetRetryParameters($retryParameters)
     {
-        $this->_retryParameters = $retryParameters;
+        // The API response does not report retry parameters.
     }
 
     /**
@@ -717,7 +703,7 @@ class ReservationRequestResponseFacade implements IReservationSavePage
      */
     public function SetRetryMessages($messages)
     {
-        $this->_retryMessages = $messages;
+        // The API response does not report retry messages.
     }
 
     /**
@@ -725,7 +711,7 @@ class ReservationRequestResponseFacade implements IReservationSavePage
      */
     public function SetCanJoinWaitList($canJoinWaitlist)
     {
-        $this->_canJoinWaitlist = $canJoinWaitlist;
+        // The API response does not report whether the waitlist can be joined.
     }
 
     /**

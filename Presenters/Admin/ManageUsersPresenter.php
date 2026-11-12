@@ -46,10 +46,7 @@ class ManageUsersPresenter extends ActionPresenter implements IManageUsersPresen
      */
     private $userRepository;
 
-    /**
-     * @var ResourceRepository
-     */
-    private $resourceRepository;
+    private IResourceRepository $resourceRepository;
 
     /**
      * @var PasswordEncryption
@@ -113,16 +110,13 @@ class ManageUsersPresenter extends ActionPresenter implements IManageUsersPresen
         $this->manageUsersService = $manageUsersService;
     }
 
-    /**
-     * @param ResourceRepository $resourceRepository
-     */
-    public function SetResourceRepository($resourceRepository)
+    public function SetResourceRepository(IResourceRepository $resourceRepository): void
     {
         $this->resourceRepository = $resourceRepository;
     }
 
     /**
-     * @param UserRepository $userRepository
+     * @param IUserRepository $userRepository
      */
     public function SetUserRepository($userRepository)
     {
@@ -131,7 +125,7 @@ class ManageUsersPresenter extends ActionPresenter implements IManageUsersPresen
 
     /**
      * @param IManageUsersPage $page
-     * @param UserRepository $userRepository
+     * @param IUserRepository $userRepository
      * @param IResourceRepository $resourceRepository
      * @param PasswordEncryption $passwordEncryption
      * @param IManageUsersService $manageUsersService
@@ -180,7 +174,7 @@ class ManageUsersPresenter extends ActionPresenter implements IManageUsersPresen
 
     public function PageLoad()
     {
-        $this->LoadUsers(pageNumber: $this->page->GetPageNumber(), pageSize: null);
+        $this->LoadUsers(pageNumber: $this->page->GetPageNumber(), pageSize: $this->page->GetPageSize());
     }
 
     /**
@@ -262,7 +256,8 @@ class ManageUsersPresenter extends ActionPresenter implements IManageUsersPresen
         $extraAttributes = [
             UserAttribute::Organization => $this->page->GetOrganization(),
             UserAttribute::Phone => $this->page->GetPhone(),
-            UserAttribute::Position => $this->page->GetPosition()];
+            UserAttribute::Position => $this->page->GetPosition()
+        ];
 
         $user = $this->manageUsersService->AddUser(
             $this->page->GetUserName(),
@@ -306,7 +301,8 @@ class ManageUsersPresenter extends ActionPresenter implements IManageUsersPresen
         $extraAttributes = [
             UserAttribute::Organization => $this->page->GetOrganization(),
             UserAttribute::Phone => $this->page->GetPhone(),
-            UserAttribute::Position => $this->page->GetPosition()];
+            UserAttribute::Position => $this->page->GetPosition()
+        ];
 
         $this->manageUsersService->UpdateUser(
             $this->page->GetUserId(),

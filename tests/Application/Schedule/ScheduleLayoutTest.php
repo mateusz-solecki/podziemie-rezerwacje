@@ -984,6 +984,29 @@ class ScheduleLayoutTest extends TestBase
         $this->assertEquals(0, $slotCountOutsideDates->Peak);
     }
 
+    public function testLoadsSundayOnlyPeakTimesAsSundayNotEveryDay()
+    {
+        $peakTimes = PeakTimes::FromRow(row: [
+            ColumnNames::PEAK_ALL_DAY => '1',
+            ColumnNames::PEAK_START_TIME => null,
+            ColumnNames::PEAK_END_TIME => null,
+            ColumnNames::PEAK_EVERY_DAY => '0',
+            ColumnNames::PEAK_DAYS => (string) DayOfWeek::SUNDAY,
+            ColumnNames::PEAK_ALL_YEAR => '1',
+            ColumnNames::PEAK_BEGIN_MONTH => '0',
+            ColumnNames::PEAK_BEGIN_DAY => '0',
+            ColumnNames::PEAK_END_MONTH => '0',
+            ColumnNames::PEAK_END_DAY => '0',
+        ]);
+
+        $sunday = Date::Parse('2016-04-10 12:00', 'UTC');
+        $monday = Date::Parse('2016-04-11 12:00', 'UTC');
+
+        $this->assertSame([DayOfWeek::SUNDAY], $peakTimes->GetWeekdays());
+        $this->assertTrue($peakTimes->IsWithinPeak(date: $sunday));
+        $this->assertFalse($peakTimes->IsWithinPeak(date: $monday));
+    }
+
     private function GetLayoutBetween($firstAvailable, $lastAvailable)
     {
         $layout = new ScheduleLayout('UTC');
@@ -1048,5 +1071,16 @@ class ScheduleLayoutTest extends TestBase
         $this->assertEquals($expectedLayout1, $date1Layout);
         $this->assertEquals($expectedLayout2, $date2Layout);
         $this->assertSame($date1Layout, $date1AgainLayout);
+    }
+
+    public function testCustomScheduleLayoutSlotCountIsCurrentlyZero(): void
+    {
+        // Documents the current behavior: custom-layout reservations are not
+        // charged credits. Update this test when the slot counting is fixed:
+        // https://github.com/LibreBooking/librebooking/issues/1871
+        $layout = new CustomScheduleLayout('UTC', 1, new FakeScheduleRepository());
+        $start = Date::Parse('2026-11-10 09:00', 'UTC');
+
+        $this->assertEquals(new SlotCount(0, 0), $layout->GetSlotCount($start, $start->AddHours(1)));
     }
 }

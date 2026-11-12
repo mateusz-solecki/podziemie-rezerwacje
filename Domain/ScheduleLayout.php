@@ -64,14 +64,13 @@ interface IScheduleLayout extends ILayoutCreation
      * @param Date $date
      * @return SchedulePeriod|null period which occurs at this datetime. Includes start time, excludes end time. null if no match is found
      */
-    public function GetPeriod(Date $date);
+    public function GetPeriod(Date $date): ?SchedulePeriod;
 
     /**
      * @param Date $startDate
      * @param Date $endDate
-     * @return SlotCount
      */
-    public function GetSlotCount(Date $startDate, Date $endDate);
+    public function GetSlotCount(Date $startDate, Date $endDate): SlotCount;
 
     /**
      * @param PeakTimes $peakTimes
@@ -79,6 +78,10 @@ interface IScheduleLayout extends ILayoutCreation
     public function ChangePeakTimes(PeakTimes $peakTimes);
 
     public function RemovePeakTimes();
+
+    public function HasPeakTimesDefined(): bool;
+
+    public function GetPeakTimes(): ?PeakTimes;
 
     /**
      * @return bool
@@ -96,25 +99,20 @@ class ScheduleLayout implements IScheduleLayout, ILayoutCreation
     public const Custom = 1;
     public const Standard = 0;
 
-    /**
-     * @var PeakTimes
-     */
-    protected $peakTimes;
+    protected ?PeakTimes $peakTimes = null;
 
     /**
-     * @var array|LayoutPeriod[]
+     * Single layouts store a list of periods; daily layouts store one list per
+     * day of week. AddPeriod() also stores SchedulePeriod objects.
+     *
+     * @var array<int, LayoutPeriod|SchedulePeriod|LayoutPeriod[]>
      */
-    private $_periods = [];
+    private array $_periods = [];
 
     /**
      * @var string
      */
     private $targetTimezone;
-
-    /**
-     * @var bool
-     */
-    private $cached = false;
 
     private $cachedPeriods = [];
 
@@ -398,15 +396,14 @@ class ScheduleLayout implements IScheduleLayout, ILayoutCreation
      */
     private function AddCached($layout, $date)
     {
-        $this->cached = true;
         $this->cachedPeriods[$date->Format('Ymd')] = $layout;
     }
 
     /**
      * @param Date $date
-     * @return array|SchedulePeriod[]
+     * @return SchedulePeriod[]|null
      */
-    private function GetCachedValuesForDate($date)
+    private function GetCachedValuesForDate($date): ?array
     {
         $key = $date->Format('Ymd');
         if (array_key_exists($date->Format('Ymd'), $this->cachedPeriods)) {
@@ -435,10 +432,7 @@ class ScheduleLayout implements IScheduleLayout, ILayoutCreation
         return $this->targetTimezone;
     }
 
-    /**
-     * @return PeakTimes
-     */
-    public function GetPeakTimes()
+    public function GetPeakTimes(): ?PeakTimes
     {
         return $this->peakTimes;
     }
@@ -507,10 +501,12 @@ class ScheduleLayout implements IScheduleLayout, ILayoutCreation
     }
 
     /**
+     * Returns the period which occurs at this datetime (includes start time,
+     * excludes end time), or null if no period matches.
+     *
      * @param Date $date
-     * @return SchedulePeriod period which occurs at this datetime. Includes start time, excludes end time
      */
-    public function GetPeriod(Date $date)
+    public function GetPeriod(Date $date): ?SchedulePeriod
     {
         $timezone = $this->layoutTimezone;
         $tempDate = $date->ToTimezone($timezone);
@@ -583,12 +579,7 @@ class ScheduleLayout implements IScheduleLayout, ILayoutCreation
         return true;
     }
 
-    /**
-     * @param Date $startDate
-     * @param Date $endDate
-     * @return SlotCount
-     */
-    public function GetSlotCount(Date $startDate, Date $endDate)
+    public function GetSlotCount(Date $startDate, Date $endDate): SlotCount
     {
         $slots = 0;
         $peakSlots = 0;
@@ -622,7 +613,7 @@ class ScheduleLayout implements IScheduleLayout, ILayoutCreation
         return new SlotCount($slots, $peakSlots);
     }
 
-    public function HasPeakTimesDefined()
+    public function HasPeakTimesDefined(): bool
     {
         return $this->peakTimes != null;
     }
@@ -761,8 +752,8 @@ class PeakTimes
 
     /**
      * @param bool $allDay
-     * @param string|Time $beginTime
-     * @param string|Time $endTime
+     * @param string|Time|null $beginTime null or ignored when $allDay
+     * @param string|Time|null $endTime null or ignored when $allDay
      * @param bool $everyDay
      * @param int[] $weekdays
      * @param bool $allYear
@@ -799,17 +790,25 @@ class PeakTimes
 
     public static function FromRow($row)
     {
-        $allDay = intval($row[ColumnNames::PEAK_ALL_DAY]);
+        $allDay = (bool) intval($row[ColumnNames::PEAK_ALL_DAY]);
 
         $beginTime = !empty($row[ColumnNames::PEAK_START_TIME]) ? Time::Parse($row[ColumnNames::PEAK_START_TIME]) : null;
         $endTime = !empty($row[ColumnNames::PEAK_END_TIME]) ? Time::Parse($row[ColumnNames::PEAK_END_TIME]) : null;
 
-        $everyDay = intval($row[ColumnNames::PEAK_EVERY_DAY]);
+        $everyDay = (bool) intval($row[ColumnNames::PEAK_EVERY_DAY]);
 
-        $weekdays = !empty($row[ColumnNames::PEAK_DAYS]) ? explode(',', $row[ColumnNames::PEAK_DAYS]) : [];
+        // Do not use empty() here: Sunday alone is stored as '0', which
+        // empty() would treat as no days, meaning every day.
+        $peakDays = $row[ColumnNames::PEAK_DAYS] ?? null;
+        $weekdays = $peakDays !== null && $peakDays !== ''
+            ? array_map(
+                callback: 'intval',
+                array: explode(separator: ',', string: $peakDays)
+            )
+            : [];
 
 
-        $allYear = intval($row[ColumnNames::PEAK_ALL_YEAR]);
+        $allYear = (bool) intval($row[ColumnNames::PEAK_ALL_YEAR]);
 
         $beginDay = $row[ColumnNames::PEAK_BEGIN_DAY];
         $beginMonth = $row[ColumnNames::PEAK_BEGIN_MONTH];
@@ -1109,9 +1108,9 @@ class CustomScheduleLayout extends ScheduleLayout implements IScheduleLayout
     private $scheduleId;
 
     /**
-     * @var SchedulePeriod[]
+     * @var array<int, SchedulePeriod[]> keyed by date timestamp
      */
-    private $cache = [];
+    private array $cache = [];
 
     /**
      * @param string $targetTimezone
@@ -1206,7 +1205,7 @@ class CustomScheduleLayout extends ScheduleLayout implements IScheduleLayout
         return $layoutDate->GetDate()->Timestamp();
     }
 
-    public function GetPeriod(Date $date)
+    public function GetPeriod(Date $date): ?SchedulePeriod
     {
         $layout = $this->GetLayout($date);
         foreach ($layout as $period) {
@@ -1218,9 +1217,13 @@ class CustomScheduleLayout extends ScheduleLayout implements IScheduleLayout
         return null;
     }
 
-    public function GetSlotCount(Date $startDate, Date $endDate)
+    public function GetSlotCount(Date $startDate, Date $endDate): SlotCount
     {
-        return 1;
+        // Custom-layout reservations are currently not charged credits.
+        // This preserves the long-standing behavior. For the planned fix
+        // (count covered custom slots, peak-aware), see:
+        // https://github.com/LibreBooking/librebooking/issues/1871
+        return new SlotCount(0, 0);
     }
 
     public function GetType()

@@ -21,7 +21,7 @@ class CustomAttributeCategory
 class CustomAttribute
 {
     /**
-     * @var int
+     * @var int|null null until the attribute is saved
      */
     protected $id;
 
@@ -41,7 +41,7 @@ class CustomAttribute
     protected $category;
 
     /**
-     * @var string
+     * @var string|null
      */
     protected $regex;
 
@@ -86,19 +86,19 @@ class CustomAttribute
     protected $sortOrder;
 
     /**
-     * @var CustomAttributeTypes|int
+     * @var int|null CustomAttributeCategory value, null when there is no secondary entity
      */
     protected $secondaryCategory;
 
     /**
-     * @var int[]
+     * @var int[]|null
      */
-    protected $secondaryEntityIds = [];
+    protected ?array $secondaryEntityIds = [];
 
     /**
-     * @var string[]
+     * @var string[]|null
      */
-    protected $secondaryEntityDescriptions = [];
+    protected ?array $secondaryEntityDescriptions = [];
 
     /**
      * @var bool
@@ -106,7 +106,7 @@ class CustomAttribute
     protected $isPrivate = false;
 
     /**
-     * @return int
+     * @return int|null
      */
     public function Id()
     {
@@ -122,7 +122,7 @@ class CustomAttribute
     }
 
     /**
-     * @return string
+     * @return string|null
      */
     public function PossibleValues()
     {
@@ -141,7 +141,7 @@ class CustomAttribute
     }
 
     /**
-     * @return string
+     * @return string|null
      */
     public function Regex()
     {
@@ -250,9 +250,10 @@ class CustomAttribute
     }
 
     /**
-     * @return bool
+     * Returns 1 when the attribute is admin-only, otherwise 0. Kept as an int
+     * because the API exposes it as a number.
      */
-    public function AdminOnly()
+    public function AdminOnly(): int
     {
         return (int)$this->adminOnly;
     }
@@ -278,13 +279,13 @@ class CustomAttribute
     }
 
     /**
-     * @param int $id
+     * @param int|null $id
      * @param string $label
      * @param CustomAttributeTypes|int $type
      * @param CustomAttributeCategory|int $category
-     * @param string $regex
+     * @param string|null $regex
      * @param bool $required
-     * @param string $possibleValues
+     * @param string|null $possibleValues
      * @param int $sortOrder
      * @param int[] $entityIds
      * @param bool $adminOnly
@@ -321,9 +322,9 @@ class CustomAttribute
      * @param string $label
      * @param CustomAttributeTypes|int $type
      * @param CustomAttributeCategory|int $category
-     * @param string $regex
+     * @param string|null $regex
      * @param bool $required
-     * @param string $possibleValues
+     * @param string|null $possibleValues
      * @param int $sortOrder
      * @param int[] $entityIds
      * @param bool $adminOnly
@@ -363,7 +364,7 @@ class CustomAttribute
     {
         $entityIds = [];
         if (!empty($row[ColumnNames::ATTRIBUTE_ENTITY_IDS])) {
-            $entityIds = explode('!sep!', $row[ColumnNames::ATTRIBUTE_ENTITY_IDS]);
+            $entityIds = array_map(intval(...), explode('!sep!', $row[ColumnNames::ATTRIBUTE_ENTITY_IDS]));
         }
 
         $descriptions = [];
@@ -439,9 +440,9 @@ class CustomAttribute
 
     /**
      * @param string $label
-     * @param string $regex
+     * @param string|null $regex
      * @param bool $required
-     * @param string $possibleValues
+     * @param string|null $possibleValues
      * @param int $sortOrder
      * @param int[] $entityIds
      * @param bool $adminOnly
@@ -471,7 +472,7 @@ class CustomAttribute
     }
 
     /**
-     * @param string $possibleValues
+     * @param string|null $possibleValues
      */
     private function SetPossibleValues($possibleValues)
     {
@@ -497,8 +498,8 @@ class CustomAttribute
     }
 
     /**
-     * @param int|CustomAttributeCategory $category
-     * @param string|int[] $entityIds
+     * @param int|CustomAttributeCategory|null $category null clears the secondary entities
+     * @param string|int[]|null $entityIds comma-separated IDs or an array; null clears
      * @param string|null $entityDescriptions
      */
     public function WithSecondaryEntities($category, $entityIds, $entityDescriptions = null)
@@ -513,7 +514,7 @@ class CustomAttribute
             if (is_array($entityIds)) {
                 $this->secondaryEntityIds = $entityIds;
             } else {
-                $this->secondaryEntityIds = explode(',', $entityIds);
+                $this->secondaryEntityIds = array_map(intval(...), explode(',', $entityIds));
             }
 
             $descriptions = [];
@@ -537,7 +538,7 @@ class CustomAttribute
     }
 
     /**
-     * @param string $regex
+     * @param string|null $regex
      */
     private function SetRegex($regex)
     {

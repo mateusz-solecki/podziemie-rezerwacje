@@ -13,7 +13,6 @@ class SmartyControlTest extends TestBase
     private $_smarty;
     private $_expectedValue = 'expected___value';
     private $_expectedName;
-    private $_expectedStyle;
     private $_id = 'id';
 
     public function setUp(): void

@@ -86,15 +86,10 @@ class Log
         }
 
         try {
-            $debug = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
-            if (is_array($debug)) {
-                $debugInfo = $debug[0];
-            } else {
-                $debugInfo = ['file' => null, 'line' => null];
-            }
+            $debugInfo = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS)[0];
 
             $args = func_get_args();
-            $log = vsprintf(array_shift($args), array_values($args));
+            $log = vsprintf(format: array_shift($args), values: $args);
             $log .= sprintf(' [File=%s,Line=%s]', $debugInfo['file'], $debugInfo['line']);
 
             $log = '[User=' . ServiceLocator::GetServer()->GetUserSession() . '] ' . $log;
@@ -116,15 +111,10 @@ class Log
         }
 
         try {
-            $debug = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
-            if (is_array($debug)) {
-                $debugInfo = $debug[0];
-            } else {
-                $debugInfo = ['file' => null, 'line' => null];
-            }
+            $debugInfo = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS)[0];
 
             $args = func_get_args();
-            $log = vsprintf(array_shift($args), array_values($args));
+            $log = vsprintf(format: array_shift($args), values: $args);
             $log .= sprintf(' [File=%s,Line=%s]', $debugInfo['file'], $debugInfo['line']);
 
             $log = '[User=' . ServiceLocator::GetServer()->GetUserSession() . '] ' . $log;
@@ -147,7 +137,7 @@ class Log
                 return;
             }
             $args = func_get_args();
-            $log = vsprintf(array_shift($args), array_values($args));
+            $log = vsprintf(format: array_shift($args), values: $args);
             $log = '[User=' . ServiceLocator::GetServer()->GetUserSession() . '] ' . $log;
             self::GetInstance()->sqlLogger->error($log);
         } catch (Exception $ex) {

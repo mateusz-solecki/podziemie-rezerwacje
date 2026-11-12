@@ -286,12 +286,7 @@ abstract class Page implements IPage
         return $this->smarty->IsValid();
     }
 
-    /**
-     * @param string $var
-     * @param string|object|array $value
-     * @return void
-     */
-    public function Set($var, $value)
+    public function Set(string $var, mixed $value): void
     {
         $this->smarty->assign($var, $value);
     }
@@ -330,40 +325,23 @@ abstract class Page implements IPage
         return $this->smarty->getTemplateVars($var);
     }
 
-    /**
-     * @param string $var
-     * @return null|string
-     */
-    protected function GetForm($var)
+    protected function GetForm(string $var): string|array|null
     {
         return $this->server->GetForm($var);
     }
 
-    /**
-     * @param string $var
-     * @return bool
-     */
-    protected function GetCheckbox($var)
+    protected function GetCheckbox(string $var): bool
     {
         $val = $this->server->GetForm($var);
         return !empty($val);
     }
 
-    /**
-     * @param string $var
-     * @return null
-     */
-    protected function GetRawForm($var)
+    protected function GetRawForm(string $var): string|array|null
     {
         return $this->server->GetRawForm($var);
     }
 
-    /**
-     * @param string $key
-     * @param bool $forceArray
-     * @return null|string|array
-     */
-    protected function GetQuerystring($key, $forceArray = false)
+    protected function GetQuerystring(string $key, bool $forceArray = false): string|array|null
     {
         $val = $this->server->GetQuerystring($key);
         if (!$forceArray) {
@@ -381,6 +359,98 @@ abstract class Page implements IPage
     }
 
     /**
+     * Reads a query string value that must be a non-negative integer ID.
+     *
+     * @return int|null null when the value is missing, empty, not made up
+     *                  only of digits, larger than PHP_INT_MAX, or submitted
+     *                  as an array
+     */
+    protected function GetQuerystringInt(string $key): ?int
+    {
+        return self::ParseInt(value: $this->GetQuerystring($key), allowNegative: false);
+    }
+
+    /**
+     * Reads a form value that must be an integer. Negative values are kept,
+     * because several forms use -1 to mean "unchanged" or "none".
+     *
+     * @return int|null null when the value is missing, empty, not an integer,
+     *                  outside the int range, or submitted as an array
+     */
+    protected function GetFormInt(string $key): ?int
+    {
+        return self::ParseInt(value: $this->GetForm($key), allowNegative: true);
+    }
+
+    /**
+     * Reads a form value that must be a number, such as a decimal credit amount.
+     *
+     * @return float|null null when the value is missing, empty, not numeric,
+     *                    not finite, or submitted as an array
+     */
+    protected function GetFormFloat(string $key): ?float
+    {
+        $value = $this->GetForm($key);
+        if (!is_string($value) || !is_numeric($value)) {
+            return null;
+        }
+
+        $floatValue = (float)$value;
+
+        return is_finite($floatValue) ? $floatValue : null;
+    }
+
+    /**
+     * Reads a form field that may be submitted once or as name[] and returns
+     * its integer values. Values that are not integers are dropped.
+     *
+     * @return int[]
+     */
+    protected function GetFormIntList(string $key): array
+    {
+        $value = $this->GetForm($key);
+        $values = is_array($value) ? $value : [$value];
+
+        $ints = [];
+        foreach ($values as $item) {
+            $intValue = self::ParseInt(value: $item, allowNegative: true);
+            if ($intValue !== null) {
+                $ints[] = $intValue;
+            }
+        }
+
+        return $ints;
+    }
+
+    /**
+     * @param mixed $value raw request value
+     */
+    private static function ParseInt(mixed $value, bool $allowNegative): ?int
+    {
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $negative = $allowNegative && str_starts_with($value, '-');
+        $unsigned = $negative ? substr($value, 1) : $value;
+        if (!ctype_digit($unsigned)) {
+            return null;
+        }
+
+        // Leading zeros are accepted; compare without them so the round trip
+        // detects values that (int) would clamp to PHP_INT_MAX or PHP_INT_MIN.
+        $digits = ltrim($unsigned, '0');
+        if ($digits === '') {
+            return 0;
+        }
+
+        $signedDigits = $negative ? '-' . $digits : $digits;
+        $intValue = (int)$signedDigits;
+
+        return (string)$intValue === $signedDigits ? $intValue : null;
+    }
+
+    /**
      * @param string $key
      * @return null|UploadedFile
      */
@@ -391,11 +461,11 @@ abstract class Page implements IPage
 
     /**
      * @param mixed $objectToSerialize
-     * @param string|null $error
+     * @param string[]|null $error the error messages
      * @param int|null $httpResponseCode
      * @return void
      */
-    protected function SetJson($objectToSerialize, $error = null, $httpResponseCode = 200)
+    protected function SetJson($objectToSerialize, ?array $error = null, $httpResponseCode = 200)
     {
         header('Content-type: application/json');
         http_response_code(empty($httpResponseCode) ? 200 : $httpResponseCode);

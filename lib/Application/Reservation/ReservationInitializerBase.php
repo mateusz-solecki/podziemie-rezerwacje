@@ -62,10 +62,7 @@ interface IReservationComponentInitializer
      */
     public function CurrentUser();
 
-    /**
-     * @return ResourceDto
-     */
-    public function PrimaryResource();
+    public function PrimaryResource(): ?IBookableResource;
 
     /**
      * @param $canChangeUser bool
@@ -123,12 +120,6 @@ interface IReservationComponentInitializer
     public function SetMaximumResources($maximum);
 
     /**
-     * @param $attribute CustomAttribute
-     * @param $value mixed
-     */
-    public function AddAttribute($attribute, $value);
-
-    /**
      * @param ErrorMessages|int $errorMessageId
      */
     public function RedirectToError($errorMessageId);
@@ -151,10 +142,7 @@ interface IReservationComponentInitializer
 
 abstract class ReservationInitializerBase implements IReservationInitializer, IReservationComponentInitializer
 {
-    /**
-     * @var ResourceDto
-     */
-    protected $primaryResource;
+    protected ?IBookableResource $primaryResource = null;
 
     /**
      * @var IReservationPage
@@ -186,10 +174,6 @@ abstract class ReservationInitializerBase implements IReservationInitializer, IR
      */
     protected $currentUser;
 
-    /**
-     * @var array|LBAttribute[]
-     */
-    private $customAttributes = [];
     /**
      * @var ITermsOfServiceRepository
      */
@@ -333,10 +317,7 @@ abstract class ReservationInitializerBase implements IReservationInitializer, IR
         return $this->currentUser;
     }
 
-    /**
-     * @return ResourceDto
-     */
-    public function PrimaryResource()
+    public function PrimaryResource(): ?IBookableResource
     {
         return $this->primaryResource;
     }
@@ -414,15 +395,6 @@ abstract class ReservationInitializerBase implements IReservationInitializer, IR
     {
         $this->primaryResource = $resource;
         $this->basePage->SetReservationResource($resource);
-    }
-
-    /**
-     * @param $attribute CustomAttribute
-     * @param $value mixed
-     */
-    public function AddAttribute($attribute, $value)
-    {
-        $this->customAttributes[] = new LBAttribute($attribute, $value);
     }
 
     public function RedirectToError($errorMessageId)

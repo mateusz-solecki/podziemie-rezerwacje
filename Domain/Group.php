@@ -5,21 +5,18 @@ class Group
     private $id;
     private $name;
     private $adminGroupId;
-    private $isDefault = 0;
+    private bool $isDefault = false;
 
     private $addedUsers = [];
     private $removedUsers = [];
     private $users = [];
 
-    private $permissionsChanged = false;
     private $removedPermissions = [];
     private $addedPermissions = [];
     private $allowedResourceIds = [];
     private $viewableResourceIds = [];
     private $removedViewPermissions = [];
     private $addedViewPermissions = [];
-
-    private $rolesChanged = false;
 
     /**
      * @var array|int[]
@@ -32,20 +29,20 @@ class Group
     private $addedRoleIds = [];
 
     /**
-     * @var array|RoleDto[]
+     * @var int[]
      */
-    private $roleIds = [];
+    private array $roleIds = [];
 
     /**
-     * @param $id int
-     * @param $name string
-     * @param $isDefault int
+     * @param int $id
+     * @param string|null $name null only for NullGroup
+     * @param bool $isDefault whether new users are automatically added to this group
      */
-    public function __construct($id, $name, $isDefault = 0)
+    public function __construct($id, $name, bool $isDefault = false)
     {
         $this->id = $id;
         $this->name = $name;
-        $this->isDefault = intval($isDefault);
+        $this->isDefault = $isDefault;
     }
 
     /**
@@ -57,7 +54,7 @@ class Group
     }
 
     /**
-     * @return string
+     * @return string|null null only for NullGroup
      */
     public function Name()
     {
@@ -72,12 +69,9 @@ class Group
         return $this->adminGroupId;
     }
 
-    /**
-     * @return int
-     */
-    public function IsDefault()
+    public function IsDefault(): bool
     {
-        return intval($this->isDefault);
+        return $this->isDefault;
     }
 
     /**
@@ -89,10 +83,7 @@ class Group
         $this->name = $groupName;
     }
 
-    /**
-     * @param int $isDefault
-     */
-    public function ChangeDefault($isDefault)
+    public function ChangeDefault(bool $isDefault)
     {
         $this->isDefault = $isDefault;
     }
@@ -226,7 +217,6 @@ class Group
      */
     public function WithFullPermission($allowedResourceId)
     {
-        $this->permissionsChanged = false;
         $this->allowedResourceIds[] = $allowedResourceId;
     }
 
@@ -236,7 +226,6 @@ class Group
      */
     public function WithViewablePermission($viewableResourceId)
     {
-        $this->permissionsChanged = false;
         $this->viewableResourceIds[] = $viewableResourceId;
     }
 
@@ -246,7 +235,6 @@ class Group
      */
     public function WithRole($role)
     {
-        $this->rolesChanged = false;
         $this->roleIds[] = $role;
     }
 
@@ -261,7 +249,6 @@ class Group
         $added = $diff->GetAddedToArray1();
 
         if ($diff->AreDifferent()) {
-            $this->permissionsChanged = true;
             $this->removedViewPermissions = $removed;
             $this->addedViewPermissions = $added;
 
@@ -280,7 +267,6 @@ class Group
         $added = $diff->GetAddedToArray1();
 
         if ($diff->AreDifferent()) {
-            $this->permissionsChanged = true;
             $this->removedPermissions = $removed;
             $this->addedPermissions = $added;
 
@@ -332,25 +318,23 @@ class Group
     }
 
     /**
-     * @return array|int[]
+     * @return int[]
      */
-    public function RoleIds()
+    public function RoleIds(): array
     {
         return $this->roleIds;
     }
 
     /**
-     * @param $roleIds int[]|array
-     * @return void
+     * @param int[] $roleIds
      */
-    public function ChangeRoles($roleIds)
+    public function ChangeRoles(array $roleIds): void
     {
         $diff = new ArrayDiff($this->roleIds, $roleIds);
         $removed = $diff->GetRemovedFromArray1();
         $added = $diff->GetAddedToArray1();
 
         if ($diff->AreDifferent()) {
-            $this->rolesChanged = true;
             $this->removedRoleIds = $removed;
             $this->addedRoleIds = $added;
 

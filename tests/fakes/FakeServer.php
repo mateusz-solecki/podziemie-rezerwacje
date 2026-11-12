@@ -11,6 +11,7 @@ class FakeServer extends Server
     public $Post = [];
     public $Get = [];
     public $Form = [];
+    public ?string $Url = null;
 
     public $_DeletedCookie;
     public $_EndedSession;
@@ -72,12 +73,17 @@ class FakeServer extends Server
         $this->_EndedSession = $name;
     }
 
+    public function GetUrl()
+    {
+        return $this->Url ?? parent::GetUrl();
+    }
+
     public function SetQuerystring($name, $value)
     {
         $this->Get[$name] = $value;
     }
 
-    public function GetQuerystring($name)
+    public function GetQuerystring(string $name): string|array|null
     {
         if (isset($this->Get[$name])) {
             return $this->Get[$name];
@@ -90,7 +96,7 @@ class FakeServer extends Server
         $this->Form[$name] = $value;
     }
 
-    public function GetForm($name)
+    public function GetForm(string $name): string|array|null
     {
         if (isset($this->Form[$name])) {
             return $this->Form[$name];
@@ -109,7 +115,7 @@ class FakeServer extends Server
         return $this->UserSession;
     }
 
-    public function GetLanguage()
+    public function GetLanguage(): ?string
     {
         return 'en_us';
     }

@@ -16,7 +16,8 @@ interface IResourcePermissionService
      * full-access and view-only resource ID arrays, filtering to only resources
      * the admin can manage.
      *
-     * @param string[]|null $submittedPermissions raw form data
+     * @param array<mixed>|null $submittedPermissions raw form data; entries
+     *        that are not well-formed strings are skipped
      * @param int[] $managedResourceIds resources the admin can manage
      * @return array{full: int[], view: int[]}
      */
@@ -81,9 +82,16 @@ class ResourcePermissionService implements IResourcePermissionService
             if (!is_scalar($permissionString)) {
                 continue;
             }
-            $split = explode('_', (string) $permissionString);
+            $split = explode(separator: '_', string: (string) $permissionString);
+
+            // Only accept "{resourceId}_{permissionType}"; a malformed id such
+            // as "1abc" would otherwise cast to a real resource id
+            if (count($split) !== 2 || !ctype_digit($split[0])) {
+                continue;
+            }
+
             $resourceId = (int) $split[0];
-            $permissionType = (string) ($split[1] ?? 'none');
+            $permissionType = $split[1];
 
             // Only allow changes to resources the current admin can administer
             if (!in_array($resourceId, $managedResourceIds, true)) {

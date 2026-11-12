@@ -2,7 +2,7 @@ includes:
     - vendor/phpstan/phpstan-phpunit/extension.neon
 
 parameters:
-    level: 2
+    level: 5
     errorFormat: prettyJson
     tmpDir: var/cache/phpstan/base
     treatPhpDocTypesAsCertain: false
@@ -36,3 +36,6 @@ parameters:
             - vendor/
     bootstrapFiles:
         - vendor/autoload.php
+    # Corrected PHPDoc for third-party code that cannot be edited.
+    stubFiles:
+        - tests/phpstan-stubs/FeedWriter.stub

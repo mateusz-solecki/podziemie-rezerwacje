@@ -15,7 +15,7 @@ class ReportCell
     private $chartValue;
 
     /**
-     * @var ChartType|string|null
+     * @var string|null ChartColumnType constant
      */
     private $chartColumnType;
     private $chartGroup;
@@ -24,7 +24,7 @@ class ReportCell
      * @param string $value
      * @param string|null $chartValue
      * @param ChartColumnType|string|null $chartColumnType
-     * @param ChartGroup $chartGroup
+     * @param string|null $chartGroup ChartGroup constant
      */
     public function __construct($value, $chartValue = null, $chartColumnType = null, $chartGroup = null)
     {

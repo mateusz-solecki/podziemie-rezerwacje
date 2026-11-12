@@ -38,10 +38,7 @@ interface IReservedItemView
      */
     public function GetReferenceNumber();
 
-    /**
-     * @return TimeInterval|null
-     */
-    public function GetBufferTime();
+    public function GetBufferTime(): TimeInterval;
 
     /**
      * @return bool
@@ -74,7 +71,7 @@ interface IReservedItemView
     public function GetAdditonalCSSClasses();
 
     /**
-     * @return string
+     * @return string|null
      */
     public function GetTitle();
 
@@ -162,12 +159,12 @@ class ReservationItemView implements IReservedItemView
     public $UserLevelId;
 
     /**
-     * @var string
+     * @var string|null
      */
     public $Title;
 
     /**
-     * @var string
+     * @var string|null
      */
     public $Description;
 
@@ -223,7 +220,7 @@ class ReservationItemView implements IReservedItemView
     public $RepeatType;
 
     /**
-     * @var int
+     * @var int|string|null
      */
 
     public $RepeatInterval;
@@ -244,7 +241,7 @@ class ReservationItemView implements IReservedItemView
     public $RepeatTerminationDate;
 
     /**
-     * @var int
+     * @var int|null
      */
     public $OwnerId;
 
@@ -253,15 +250,15 @@ class ReservationItemView implements IReservedItemView
      */
     public $OwnerEmailAddress;
     /**
-     * @var string
+     * @var string|null
      */
     public $OwnerPhone;
     /**
-     * @var string
+     * @var string|null
      */
     public $OwnerOrganization;
     /**
-     * @var string
+     * @var string|null
      */
     public $OwnerPosition;
 
@@ -404,14 +401,14 @@ class ReservationItemView implements IReservedItemView
     public $ScheduleAdminGroupId = null;
 
     /**
-     * @var int|null
+     * @var int
      */
     private $bufferSeconds = 0;
 
     private $ownerGroupIds = [];
 
     /**
-     * @var StylingFactory
+     * @var IStylingFactory
      */
     private $StylingFactory;
 
@@ -617,7 +614,12 @@ class ReservationItemView implements IReservedItemView
         }
 
         if (isset($row[ColumnNames::GROUP_LIST])) {
-            $view->WithOwnerGroupIds(explode(',', $row[ColumnNames::GROUP_LIST]));
+            $view->WithOwnerGroupIds(
+                ownerGroupIds: array_map(
+                    callback: 'intval',
+                    array: explode(',', $row[ColumnNames::GROUP_LIST])
+                )
+            );
         }
 
         if (isset($row[ColumnNames::START_REMINDER_MINUTES_PRIOR])) {
@@ -847,10 +849,7 @@ class ReservationItemView implements IReservedItemView
         return $this->Attributes->Get($attributeId);
     }
 
-    /**
-     * @return TimeInterval
-     */
-    public function GetBufferTime()
+    public function GetBufferTime(): TimeInterval
     {
         return TimeInterval::Parse($this->bufferSeconds);
     }
@@ -1140,12 +1139,12 @@ class BlackoutItemView extends ReservationItemView
      * @param Date $startDate
      * @param Date $endDate
      * @param int $resourceId
-     * @param int $ownerId
+     * @param int|null $ownerId
      * @param int $scheduleId
      * @param string $title
      * @param string $description
-     * @param string $firstName
-     * @param string $lastName
+     * @param string|null $firstName
+     * @param string|null $lastName
      * @param string $resourceName
      * @param int $seriesId
      * @param string $repeatOptions
@@ -1260,12 +1259,10 @@ class BlackoutItemView extends ReservationItemView
         return '';
     }
 
-    /**
-     * @return int|null
-     */
-    public function GetBufferTime()
+    public function GetBufferTime(): TimeInterval
     {
-        return null;
+        // Blackouts have no buffer; an empty interval keeps the contract non-null.
+        return TimeInterval::None();
     }
 
     /**

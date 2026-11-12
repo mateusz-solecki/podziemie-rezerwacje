@@ -10,7 +10,7 @@ interface IResourceService
      * @param int $scheduleId
      * @param bool $includeInaccessibleResources
      * @param UserSession $user
-     * @param ScheduleResourceFilter|null $filter
+     * @param IScheduleResourceFilter|null $filter
      * @return array|ResourceDto[]
      */
     public function GetScheduleResources($scheduleId, $includeInaccessibleResources, UserSession $user, $filter = null);
@@ -19,9 +19,9 @@ interface IResourceService
      * Gets resource list
      * @param bool $includeInaccessibleResources
      * @param UserSession $user
-     * @param ScheduleResourceFilter|null $filter
-     * @param null $pageNumber
-     * @param null $pageSize
+     * @param IScheduleResourceFilter|null $filter
+     * @param int|null $pageNumber null for no paging
+     * @param int|null $pageSize null for no paging
      * @return array|ResourceDto[]
      */
     public function GetAllResources($includeInaccessibleResources, UserSession $user, $filter = null, $pageNumber = null, $pageSize = null);
@@ -32,7 +32,7 @@ interface IResourceService
     public function GetAccessories();
 
     /**
-     * @param int $scheduleId
+     * @param int|null $scheduleId null for all schedules
      * @param UserSession $user
      * @return ResourceGroupTree
      */

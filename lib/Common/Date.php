@@ -208,16 +208,14 @@ class Date
 
     /**
      * Formats the Date into a format that is accepted by the database
-     *
-     * @return string
      */
-    public function ToDatabase()
+    public function ToDatabase(): ?string
     {
         return $this->ToUtc()->Format('Y-m-d H:i:s');
     }
 
     /**
-     * @param string $databaseValue
+     * @param string|null $databaseValue an empty or null value gives a NullDate
      * @return Date
      */
     public static function FromDatabase($databaseValue)
@@ -656,9 +654,9 @@ class Date
     }
 
     /**
-     * @return int
+     * Returns the ISO-8601 week number, zero-padded (for example "05").
      */
-    public function WeekNumber()
+    public function WeekNumber(): string
     {
         return $this->Format('W');
     }
@@ -674,11 +672,7 @@ class Date
      */
     public static function _SetNow(Date $date)
     {
-        if (is_null($date)) {
-            self::$_Now = null;
-        } else {
-            self::$_Now = $date;
-        }
+        self::$_Now = $date;
     }
 
     /**
@@ -808,7 +802,7 @@ class NullDate extends Date
         return '';
     }
 
-    public function ToDatabase()
+    public function ToDatabase(): ?string
     {
         return null;
     }
@@ -852,7 +846,7 @@ class DateDiff
     private $seconds = 0;
 
     /**
-     * @param int $seconds
+     * @param int|float $seconds truncated to whole seconds
      */
     public function __construct($seconds)
     {
@@ -920,6 +914,12 @@ class DateDiff
 
         if ($hasTime) {
             $parts = explode(':', $timeString);
+            foreach ($parts as $part) {
+                if (!ctype_digit($part)) {
+                    throw new Exception('Time must be a valid time HH:mm or DD:HH:mm');
+                }
+            }
+            $parts = array_map(callback: 'intval', array: $parts);
 
             if (count($parts) == 3) {
                 $day = $parts[0];
@@ -1041,7 +1041,7 @@ class DateDiff
     }
 
     /**
-     * @param false $short
+     * @param bool $short
      * @return string
      */
     public function ToString($short = false)

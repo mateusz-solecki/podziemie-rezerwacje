@@ -28,6 +28,7 @@ class ManageResourcesPresenterTest extends TestBase
         $attributeService->method('GetByCategory')->willReturn([]);
 
         $this->page->method('GetPageNumber')->willReturn(3);
+        $this->page->method('GetPageSize')->willReturn(20);
         $this->page->method('GetFilterValues')->willReturn(new ResourceFilterValues());
         $this->resourceRepository->method('GetResourceTypes')->willReturn([]);
         $this->resourceRepository->method('GetStatusReasons')->willReturn([]);
@@ -40,31 +41,146 @@ class ManageResourcesPresenterTest extends TestBase
             $this->createMock(IImageFactory::class),
             $groupRepository,
             $attributeService,
-            $this->createMock(IUserPreferenceRepository::class),
             $this->createMock(IReservationViewRepository::class)
         );
     }
 
     public function testPageLoadRequestsCurrentPage(): void
     {
-        $this->ExpectGetListPaging(expectedPageNumber: 3);
+        $this->ExpectGetListPaging(expectedPageNumber: 3, expectedPageSize: 20);
 
         $this->presenter->PageLoad();
     }
 
     public function testExportResourcesLoadsAllResources(): void
     {
-        $this->ExpectGetListPaging(expectedPageNumber: null);
+        $this->ExpectGetListPaging(expectedPageNumber: null, expectedPageSize: null);
         $this->page->expects($this->once())->method('ShowExportCsv');
 
         $this->presenter->ExportResources();
     }
 
-    private function ExpectGetListPaging(?int $expectedPageNumber): void
+    private function ExpectGetListPaging(?int $expectedPageNumber, ?int $expectedPageSize): void
     {
         $this->resourceRepository->expects($this->once())
             ->method('GetList')
-            ->with($this->identicalTo($expectedPageNumber), $this->isNull())
+            ->with($this->identicalTo($expectedPageNumber), $this->identicalTo($expectedPageSize))
             ->willReturn(new PageableData([]));
+    }
+
+    public function testBulkUpdateLeavesDropdownFieldsUnchangedForMinusOne(): void
+    {
+        $resource = $this->CreateResourceForBulkUpdate();
+        $this->ConfigureBulkUpdate(resource: $resource, dropdownValue: -1);
+
+        $this->presenter->BulkUpdate();
+
+        $this->assertSame(5, $resource->GetScheduleId());
+        $this->assertSame(7, $resource->GetResourceTypeId());
+        $this->assertSame(9, $resource->GetAdminGroupId());
+        $this->assertSame(ResourceStatus::AVAILABLE, $resource->GetStatusId());
+    }
+
+    public function testBulkUpdateChangesDropdownFieldsAndKeepsDecimalCredits(): void
+    {
+        $resource = $this->CreateResourceForBulkUpdate();
+        $this->ConfigureBulkUpdate(resource: $resource, dropdownValue: 2);
+        $this->page->method('GetCredits')->willReturn(1.5);
+
+        $this->presenter->BulkUpdate();
+
+        $this->assertSame(2, $resource->GetScheduleId());
+        $this->assertSame(2, $resource->GetResourceTypeId());
+        $this->assertSame(2, $resource->GetAdminGroupId());
+        $this->assertSame(2, $resource->GetStatusId());
+        $this->assertSame(1.5, $resource->GetCreditsPerSlot());
+    }
+
+    public function testBulkUpdateAppliesExplicitZeroCredits(): void
+    {
+        $resource = $this->CreateResourceForBulkUpdate();
+        $this->ConfigureBulkUpdate(resource: $resource, dropdownValue: -1);
+        $this->page->method('GetCredits')->willReturn(0.0);
+        $this->page->method('GetPeakCredits')->willReturn(0.0);
+
+        $this->presenter->BulkUpdate();
+
+        $this->assertEquals(0, $resource->GetCreditsPerSlot());
+        $this->assertEquals(0, $resource->GetPeakCreditsPerSlot());
+    }
+
+    public function testBulkUpdateLeavesCreditsUnchangedWhenBlank(): void
+    {
+        $resource = $this->CreateResourceForBulkUpdate();
+        $this->ConfigureBulkUpdate(resource: $resource, dropdownValue: -1);
+        $this->page->method('GetCredits')->willReturn(null);
+        $this->page->method('GetPeakCredits')->willReturn(null);
+
+        $this->presenter->BulkUpdate();
+
+        $this->assertEquals(3, $resource->GetCreditsPerSlot());
+        $this->assertEquals(4, $resource->GetPeakCreditsPerSlot());
+    }
+
+    private function CreateResourceForBulkUpdate(): BookableResource
+    {
+        $resource = BookableResource::CreateNew('Room', 5);
+        $resource->SetResourceTypeId(7);
+        $resource->SetAdminGroupId(9);
+        $resource->ChangeStatus(ResourceStatus::AVAILABLE);
+        $resource->SetCreditsPerSlot(3);
+        $resource->SetPeakCreditsPerSlot(4);
+
+        return $resource;
+    }
+
+    public function testBulkUpdateTurnsYesNoFieldsOn(): void
+    {
+        $resource = $this->CreateResourceForBulkUpdate();
+        $this->ConfigureBulkUpdate(resource: $resource, dropdownValue: -1, yesNoValue: 1);
+
+        $this->presenter->BulkUpdate();
+
+        $this->assertTrue($resource->GetAllowMultiday());
+        $this->assertSame(1, $resource->GetRequiresApproval());
+        $this->assertSame(1, $resource->GetAutoAssign());
+        $this->assertTrue($resource->IsCheckInEnabled());
+    }
+
+    public function testBulkUpdateTurnsYesNoFieldsOff(): void
+    {
+        $resource = $this->CreateResourceForBulkUpdate();
+        $resource->SetAllowMultiday(value: true);
+        $resource->SetRequiresApproval(value: true);
+        $resource->SetAutoAssign(value: true);
+        $resource->SetCheckin(enabled: true, autoReleaseMinutes: null);
+        $this->ConfigureBulkUpdate(resource: $resource, dropdownValue: -1, yesNoValue: 0);
+
+        $this->presenter->BulkUpdate();
+
+        $this->assertFalse($resource->GetAllowMultiday());
+        $this->assertSame(0, $resource->GetRequiresApproval());
+        $this->assertSame(0, $resource->GetAutoAssign());
+        $this->assertFalse($resource->IsCheckInEnabled());
+    }
+
+    /**
+     * @param int $dropdownValue value for the schedule, resource type, admin group and status dropdowns
+     * @param int $yesNoValue value for the multi-day, approval, auto-assign and check-in dropdowns
+     */
+    private function ConfigureBulkUpdate(BookableResource $resource, int $dropdownValue, int $yesNoValue = -1): void
+    {
+        $this->page->method('GetBulkUpdateResourceIds')->willReturn([1]);
+        $this->page->method('GetAttributes')->willReturn([]);
+        foreach (['GetScheduleId', 'GetResourceTypeId', 'GetAdminGroupId', 'GetStatusId'] as $method) {
+            $this->page->method($method)->willReturn($dropdownValue);
+        }
+        foreach (['GetBulkAllowMultiday', 'GetBulkRequiresApproval', 'GetBulkAutoAssign', 'GetBulkEnableCheckin'] as $method) {
+            $this->page->method($method)->willReturn($yesNoValue);
+        }
+        $this->page->method('GetBulkAllowConcurrentReservations')->willReturn(-1);
+        $this->page->method('GetAllowSubscriptions')->willReturn('-1');
+        $this->resourceRepository->method('LoadById')->willReturn($resource);
+        $this->resourceRepository->expects($this->once())->method('Update')->with($this->identicalTo($resource));
     }
 }

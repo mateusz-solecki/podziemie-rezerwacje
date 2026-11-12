@@ -22,10 +22,7 @@ class ReservationUpdatePresenter implements IReservationUpdatePresenter
      */
     private $page;
 
-    /**
-     * @var UpdateReservationPersistenceService
-     */
-    private $persistenceService;
+    private IUpdateReservationPersistenceService $persistenceService;
 
     /**
      * @var IReservationHandler
@@ -116,9 +113,7 @@ class ReservationUpdatePresenter implements IReservationUpdatePresenter
         $attachments = $this->page->GetAttachments();
         foreach ($attachments as $attachment) {
             if ($attachment != null) {
-                if ($attachment->IsError()) {
-                    Log::Error('Error attaching file %s. %s', $attachment->OriginalName(), $attachment->Error());
-                } else {
+                if (!$attachment->IsError()) {
                     Log::Debug('Attaching file %s to series %s', $attachment->OriginalName(), $existingSeries->SeriesId());
                     $att = ReservationAttachment::Create(
                         $attachment->OriginalName(),
@@ -162,6 +157,13 @@ class ReservationUpdatePresenter implements IReservationUpdatePresenter
      */
     public function HandleReservation($reservationSeries)
     {
+        $rejectedUploads = UploadedFile::GetRejectedMessages($this->page->GetAttachments());
+        if (!empty($rejectedUploads)) {
+            $this->page->SetSaveSuccessfulMessage(false);
+            $this->page->SetErrors($rejectedUploads);
+            return;
+        }
+
         $successfullySaved = $this->handler->Handle($reservationSeries, $this->page);
 
         if ($successfullySaved) {

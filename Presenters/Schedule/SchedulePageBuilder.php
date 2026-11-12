@@ -4,14 +4,14 @@ interface ISchedulePageBuilder
 {
     /**
      * @param ISchedulePage $page
-     * @param ISchedule[] $schedules
+     * @param Schedule[] $schedules
      * @param ISchedule $currentSchedule
      */
     public function BindSchedules(ISchedulePage $page, $schedules, $currentSchedule);
 
     /**
      * @param ISchedulePage $page
-     * @param ISchedule[] $schedules
+     * @param Schedule[] $schedules
      * @param UserSession $user
      * @return Schedule
      */
@@ -63,13 +63,6 @@ interface ISchedulePageBuilder
     /**
      * @param int $scheduleId
      * @param ISchedulePage $page
-     * @return int
-     */
-    public function GetGroupId($scheduleId, ISchedulePage $page);
-
-    /**
-     * @param int $scheduleId
-     * @param ISchedulePage $page
      * @return ScheduleResourceFilter
      */
     public function GetResourceFilter($scheduleId, ISchedulePage $page);
@@ -77,8 +70,8 @@ interface ISchedulePageBuilder
     /**
      * @param ISchedulePage $page
      * @param ScheduleResourceFilter $filter
-     * @param Attribute[] $resourceCustomAttributes
-     * @param Attribute[] $resourceTypeCustomAttributes
+     * @param LBAttribute[] $resourceCustomAttributes
+     * @param LBAttribute[] $resourceTypeCustomAttributes
      */
     public function BindResourceFilter(
         ISchedulePage $page,
@@ -92,7 +85,7 @@ class SchedulePageBuilder implements ISchedulePageBuilder
 {
     /**
      * @param ISchedulePage $page
-     * @param ISchedule[] $schedules
+     * @param Schedule[] $schedules
      * @param ISchedule $currentSchedule
      */
     public function BindSchedules(ISchedulePage $page, $schedules, $currentSchedule)
@@ -114,7 +107,7 @@ class SchedulePageBuilder implements ISchedulePageBuilder
 
     /**
      * @param ISchedulePage $page
-     * @param ISchedule[] $schedules
+     * @param Schedule[] $schedules
      * @param UserSession $user
      * @return Schedule
      */
@@ -297,35 +290,6 @@ class SchedulePageBuilder implements ISchedulePageBuilder
     public function BindResourceGroups(ISchedulePage $page, ResourceGroupTree $resourceGroupTree)
     {
         $page->SetResourceGroupTree($resourceGroupTree);
-    }
-
-    public function GetGroupId($scheduleId, ISchedulePage $page)
-    {
-        $groupId = $page->GetGroupId();
-        if (!empty($groupId)) {
-            return $groupId;
-        }
-
-        $cookie = $this->getTreeCookie($scheduleId);
-
-        if (!empty($cookie)) {
-            if (strpos($cookie, '-') === false) {
-                return $groupId;
-            }
-        }
-
-        return null;
-    }
-
-    private function getTreeCookie($scheduleId)
-    {
-        $cookie = ServiceLocator::GetServer()->GetCookie('tree' . $scheduleId);
-        if (!empty($cookie)) {
-            $val = json_decode($cookie, true);
-            return $val['selected_node'];
-        }
-
-        return null;
     }
 
     public function BindResourceTypes(ISchedulePage $page, $resourceTypes)
