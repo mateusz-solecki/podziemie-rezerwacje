@@ -207,7 +207,7 @@ class ManageReservationsPresenterTest extends TestBase
 
     public function testPageLoadRequestsCurrentPage()
     {
-        $this->ExpectLoadFilteredPaging(format: null, expectedPageNumber: 3, expectedPageSize: 20);
+        $this->ExpectLoadFilteredPaging(format: null, expectedPageNumber: 3);
 
         $this->page->expects($this->once())->method('ShowPage');
 
@@ -216,7 +216,7 @@ class ManageReservationsPresenterTest extends TestBase
 
     public function testCsvExportLoadsAllReservations()
     {
-        $this->ExpectLoadFilteredPaging(format: 'csv', expectedPageNumber: null, expectedPageSize: null);
+        $this->ExpectLoadFilteredPaging(format: 'csv', expectedPageNumber: null);
 
         $this->page->expects($this->once())->method('ShowCsv');
         $this->page->expects($this->never())->method('ShowPage');
@@ -224,11 +224,10 @@ class ManageReservationsPresenterTest extends TestBase
         $this->presenter->PageLoad('America/Chicago');
     }
 
-    private function ExpectLoadFilteredPaging(?string $format, ?int $expectedPageNumber, ?int $expectedPageSize): void
+    private function ExpectLoadFilteredPaging(?string $format, ?int $expectedPageNumber): void
     {
         $this->page->method('GetFormat')->willReturn($format);
         $this->page->method('GetPageNumber')->willReturn(3);
-        $this->page->method('GetPageSize')->willReturn(20);
         $this->page->method('FilterButtonPressed')->willReturn(true);
         $this->page->method('GetAttributeFilters')->willReturn([]);
         $this->resourceRepository->method('GetStatusReasons')->willReturn([]);
@@ -236,7 +235,7 @@ class ManageReservationsPresenterTest extends TestBase
 
         $this->reservationsService->expects($this->once())
             ->method('LoadFiltered')
-            ->with($this->identicalTo($expectedPageNumber), $this->identicalTo($expectedPageSize))
+            ->with($this->identicalTo($expectedPageNumber), $this->isNull())
             ->willReturn(new PageableData([]));
     }
 
@@ -452,8 +451,7 @@ class ManageReservationsPresenterTest extends TestBase
             ->willReturnCallback(function ($res) use ($matcher, $res1, $res2) {
                 match ($matcher->numberOfInvocations()) {
                     1 => $this->assertEquals($res, $res1),
-                    2 => $this->assertEquals($res, $res2),
-                    default => $this->fail('Unexpected invocation ' . $matcher->numberOfInvocations()),
+                    2 => $this->assertEquals($res, $res2)
                 };
             });
 
@@ -479,8 +477,7 @@ class ManageReservationsPresenterTest extends TestBase
                 $this->assertEquals($this->fakeUser, $session);
                 match ($matcher->numberOfInvocations()) {
                     1 => $this->assertEquals(1, $id),
-                    2 => $this->assertEquals(2, $id),
-                    default => $this->fail('Unexpected invocation ' . $matcher->numberOfInvocations()),
+                    2 => $this->assertEquals(2, $id)
                 };
             });
 
@@ -495,9 +492,9 @@ class ManageReservationsPresenterTest extends TestBase
      * @param int $resourceId
      * @param int $userId
      * @param int $statusId
-     * @param int|null $resourceStatusId
-     * @param int|null $resourceStatusReasonId
-     * @param LBAttribute[]|null $attributes
+     * @param null $resourceStatusId
+     * @param null $resourceStatusReasonId
+     * @param Attribute[] $attributes
      * @return ReservationFilter
      */
     private function GetExpectedFilter(

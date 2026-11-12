@@ -13,7 +13,6 @@ require_once(ROOT_DIR . 'lib/Common/SmartyControls/namespace.php');
 use League\Uri\QueryString;
 use League\Uri\Uri;
 use Smarty\Smarty;
-use Smarty\Template;
 
 class SmartyPage extends Smarty
 {
@@ -50,17 +49,17 @@ class SmartyPage extends Smarty
 
         $this->debugging = isset($_GET['debug']);
         $this->AddTemplateDirectory($base . 'tpl');
-        $this->setCompileDir($base . 'tpl_c');
-        $this->setConfigDir($base . 'configs');
-        $this->setCacheDir($base . 'cache');
+        $this->compile_dir = $base . 'tpl_c';
+        $this->config_dir = $base . 'configs';
+        $this->cache_dir = $base . 'cache';
         $this->plugins_dir = $base . 'vendor/smarty/smarty/libs/plugins';
         //$this->error_reporting = E_ALL & ~E_NOTICE;
         $this->muteUndefinedOrNullWarnings();
 
         $cacheTemplates = Configuration::Instance()->GetKey(ConfigKeys::CACHE_TEMPLATES, new BooleanConverter());
 
-        $this->caching = Smarty::CACHING_OFF;
-        $this->compile_check = $cacheTemplates ? Smarty::COMPILECHECK_OFF : Smarty::COMPILECHECK_ON;
+        $this->caching = false;
+        $this->compile_check = !$cacheTemplates;
         $this->force_compile = !$cacheTemplates;
 
         if (is_null($resources)) {
@@ -244,7 +243,6 @@ class SmartyPage extends Smarty
         $this->registerPlugin('modifier', 'strtolower', $this->Strtolower(...));
         $this->registerPlugin('function', 'datatable', $this->CreateDataTable(...));
         $this->registerPlugin('function', 'datatablefilter', $this->CreateDataTableFilter(...));
-        $this->registerPlugin('function', 'pagination', $this->CreatePagination(...));
         $this->registerPlugin('modifier', 'microtime', $this->Microtime(...));
         $this->registerPlugin('modifier', 'array_key_exists', $this->ArrayKeyExists(...));
         $this->registerPlugin('modifier', 'count', $this->Count(...));
@@ -286,26 +284,19 @@ class SmartyPage extends Smarty
         $this->failedValidators[$id] = $validator;
     }
 
-    private function AppendAttributes(array $params, array $knownAttributes): string
+    private function AppendAttributes($params, $knownAttributes)
     {
         $extraKeys = array_diff(array_keys($params), $knownAttributes);
 
         $attributes = new StringBuilder();
         foreach ($extraKeys as $key) {
-            $value = $this->EscapeHtml($params[$key]);
-            $attributes->Append("$key=\"$value\" ");
+            $attributes->Append("$key=\"{$params[$key]}\" ");
         }
 
         return $attributes->ToString();
     }
 
-    private function EscapeHtml(mixed $value): string
-    {
-        // Stored values can contain legacy HTML entities. Preserve those entities.
-        return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', false);
-    }
-
-    public function PrintLink(array $params, Template $template): string
+    public function PrintLink($params, $smarty)
     {
         $string = $this->Resources->GetString($params['key']);
         if (!isset($params['title'])) {
@@ -323,14 +314,10 @@ class SmartyPage extends Smarty
         $knownAttributes = ['key', 'title', 'href'];
         $attributes = $this->AppendAttributes($params, $knownAttributes);
 
-        $href = $this->EscapeHtml($href);
-        $title = $this->EscapeHtml($title);
-        $string = $this->EscapeHtml($string);
-
         return "<a href=\"$href\" class=\"link-primary\" title=\"$title\" $attributes><i class=\"bi bi-people-fill me-1\"></i>$string</a>";
     }
 
-    public function SmartyTranslate(array $params, Template $template): string
+    public function SmartyTranslate($params, $smarty)
     {
         if (!isset($params['args'])) {
             return $this->Resources->GetString($params['key'], '');
@@ -338,7 +325,7 @@ class SmartyPage extends Smarty
         return $this->Resources->GetString($params['key'], explode(',', $params['args']));
     }
 
-    public function FormatDate(array $params, Template $template): string
+    public function FormatDate($params, $smarty)
     {
         if (!isset($params['date']) || empty($params['date'])) {
             return '';
@@ -370,7 +357,7 @@ class SmartyPage extends Smarty
         return $formatted;
     }
 
-    public function DisplayControl(array $params, Template $template): void
+    public function DisplayControl($params, $smarty)
     {
         $type = $params['type'];
         require_once(ROOT_DIR . "Controls/$type.php");
@@ -387,7 +374,7 @@ class SmartyPage extends Smarty
         $control->PageLoad();
     }
 
-    public function ValidationGroup(array $params, ?string $content, Template $template, bool &$repeat): string
+    public function ValidationGroup($params, $content, $smarty, &$repeat)
     {
         $class = 'error';
 
@@ -410,12 +397,12 @@ class SmartyPage extends Smarty
         return '';
     }
 
-    public function Validator(array $params, Template $template): string
+    public function Validator($params, $smarty)
     {
         $validator = $this->Validators->Get($params['id']);
         if (!$validator->IsValid()) {
             if (isset($params['key']) && !empty($params['key'])) {
-                return '<li>' . $this->SmartyTranslate(['key' => $params['key']], $template) . '</li>';
+                return '<li>' . $this->SmartyTranslate(['key' => $params['key']], $smarty) . '</li>';
             }
 
             $messages = $validator->Messages();
@@ -431,16 +418,16 @@ class SmartyPage extends Smarty
         return '';
     }
 
-    public function AsyncValidator(array $params, Template $template): string
+    public function AsyncValidator($params, $smarty)
     {
         $message = '';
         if (isset($params['key']) && !empty($params['key'])) {
-            $message = $this->SmartyTranslate(['key' => $params['key']], $template);
+            $message = $this->SmartyTranslate(['key' => $params['key']], $smarty);
         }
         return sprintf('<li class="asyncValidation" id="%s">%s</li>', $params['id'], $message);
     }
 
-    public function Textbox(array $params, Template $template): string
+    public function Textbox($params, $smarty)
     {
         $class = null;
         $value = null;
@@ -486,19 +473,19 @@ class SmartyPage extends Smarty
             $params['placeholder'] = $this->Resources->GetString($params['placeholderkey']);
         }
 
-        $knownAttributes = ['value', 'type', 'name', 'id', 'placeholderkey', 'required'];
+        $knownAttributes = ['value', 'type', 'name', 'placeholderkey', 'required'];
         $attributes = $this->AppendAttributes($params, $knownAttributes);
 
         if ($type == 'password') {
-            $textbox = new SmartyPasswordbox($params['name'], 'password', $id, $value, $attributes, $required, $template);
+            $textbox = new SmartyPasswordbox($params['name'], 'password', $id, $value, $attributes, $required, $smarty);
         } else {
-            $textbox = new SmartyTextbox($params['name'], $type, $id, $value, $attributes, $required, $template);
+            $textbox = new SmartyTextbox($params['name'], $type, $id, $value, $attributes, $required, $smarty);
         }
 
         return $textbox->Html();
     }
 
-    public function ObjectHtmlOptions(array $params, Template $template): string
+    public function ObjectHtmlOptions($params, $smarty)
     {
         $key = $params['key'];
         $label = $params['label'];
@@ -511,26 +498,26 @@ class SmartyPage extends Smarty
         foreach ($options as $option) {
             $_key = ($usemethod) ? $option->$key() : $option->$key;
             $_label = ($usemethod) ? $option->$label() : $option->$label;
-            $isselected = ($_key == $selected) ? ' selected="selected"' : '';
+            $isselected = ($_key == $selected) ? 'selected="selected"' : '';
             $builder->Append(sprintf(
                 '<option label="%s" value="%s"%s>%s</option>',
-                $this->EscapeHtml($_label),
-                $this->EscapeHtml($_key),
+                $_label,
+                $_key,
                 $isselected,
-                $this->EscapeHtml($_label)
+                $_label
             ));
         }
 
         return $builder->ToString();
     }
 
-    public function SetFocus(array $params, Template $template): string
+    public function SetFocus($params, $smarty)
     {
         $id = isset($params['key']) ? FormKeys::Evaluate($params['key']) : $params['id'];
         return "<script type=\"text/javascript\">document.getElementById('$id').focus();</script>";
     }
 
-    public function GetFormName(array $params, Template $template): string
+    public function GetFormName($params, $smarty)
     {
         $append = '';
 
@@ -540,7 +527,7 @@ class SmartyPage extends Smarty
         return 'name=\'' . FormKeys::Evaluate($params['key']) . $append . '\'';
     }
 
-    public function CreateUrl(mixed $url): string
+    public function CreateUrl($url)
     {
         // credit to WordPress wp-includes/formatting.php
         $make_url_clickable = function ($matches) {
@@ -640,14 +627,14 @@ class SmartyPage extends Smarty
         return $validator->isValid($email, $rule);
     }
 
-    private function GetDefaultDataTablePageSize(): int
+    private function GetDefaultDataTablePageSize()
     {
         $defaultPageSize = intval(Configuration::Instance()->GetKey(ConfigKeys::DEFAULT_PAGE_SIZE));
 
         return $defaultPageSize > 0 ? $defaultPageSize : 50;
     }
 
-    private function BuildDataTableLengthMenu(string $allText): string
+    private function BuildDataTableLengthMenu($allText)
     {
         $defaultPageSize = $this->GetDefaultDataTablePageSize();
 
@@ -668,10 +655,11 @@ class SmartyPage extends Smarty
         );
     }
 
-    public function CreateDataTable(array $params, Template $template): string
+    public function CreateDataTable($params)
     {
         $tableId = $params['tableId'];
         $searchText = $this->Resources->GetString('Filter');
+        $AllText = $this->Resources->GetString('All');
         $NoResultsFoundText = $this->Resources->GetString('NoResultsFound');
         $copyText = $this->Resources->GetString('Copy');
         $exportText = $this->Resources->GetString('Export');
@@ -679,6 +667,8 @@ class SmartyPage extends Smarty
         $showHideText = $this->Resources->GetString('ShowHide');
         $infoText = $this->Resources->GetString('Info');
         $lengthMenuText = $this->Resources->GetString('LengthMenu');
+        $defaultPageSize = $this->GetDefaultDataTablePageSize();
+        $lengthMenu = $this->BuildDataTableLengthMenu($AllText);
 
         if ($tableId == 'report-results') {
             $pagination = '"paging": false,
@@ -687,12 +677,12 @@ class SmartyPage extends Smarty
                 "info": false,
                 "ordering": false,';
         } else {
-            $pagination = '"paging": false, "info": false,';
+            $pagination = '"pageLength": ' . $defaultPageSize . ', "lengthMenu": ' . $lengthMenu . ',';
         }
 
         return sprintf(
             '<script>
-           var table =  new DataTable("#' . $tableId . '", {
+           var table =  $("#' . $tableId . '").DataTable({
                 "searching": false,
                 "dom": \'<"d-flex justify-content-center flex-wrap"B><"d-flex justify-content-between flex-wrap mt-2"fil>rt<"d-flex justify-content-center"i><"d-flex justify-content-center"p><"clear">\',
                 ' . $pagination . '
@@ -727,9 +717,12 @@ class SmartyPage extends Smarty
                     }
                 ],
                 "initComplete": function(settings, json) {
-                    $(".dt-buttons .btn-secondary").removeClass("btn-secondary").addClass("btn-primary");
-                    $(".dt-buttons").addClass("btn-group-sm");
-                    $(".buttons-collection").addClass("btn-sm");
+                    var table = this.api();
+                    table.on("init.dt", function () {
+                        $(".dt-buttons .btn-secondary").removeClass("btn-secondary").addClass("btn-primary");
+                        $(".dt-buttons").addClass("btn-group-sm");
+                        $(".buttons-collection").addClass("btn-sm");
+                    });
                 },
                 "drawCallback": function (settings) {
                     if (typeof setUpEditables !== "undefined") {
@@ -741,7 +734,7 @@ class SmartyPage extends Smarty
         '
         );
     }
-    public function CreateDataTableFilter(array $params, Template $template): string
+    public function CreateDataTableFilter($params)
     {
         $tableId = $params['tableId'];
         $searchText = $this->Resources->GetString('Filter');
@@ -754,7 +747,7 @@ class SmartyPage extends Smarty
 
         return sprintf(
             '<script>
-           const tableFilter =  new DataTable("#' . $tableId . '", {
+           var table =  $("#' . $tableId . '").DataTable({
                 "dom": \'<"d-flex justify-content-between my-1"fl><t>t<"d-flex justify-content-center"i><"d-flex justify-content-center"p><"clear">\',
                 "pageLength": ' . $defaultPageSize . ',
                 "lengthMenu": ' . $lengthMenu . ',
@@ -776,89 +769,6 @@ class SmartyPage extends Smarty
         </script>
         '
         );
-    }
-
-    /**
-     * Create pagination links
-     * @param array $params Contains 'pageInfo' (PageInfo object)
-     * @param Template $template
-     * @return string HTML pagination markup
-     */
-    public function CreatePagination(array $params, Template $template): string
-    {
-        /** @var PageInfo $pageInfo */
-        $pageInfo = $params['pageInfo'];
-        $hideCount = isset($params['showCount']) && $params['showCount'] == false;
-
-        if (empty($pageInfo->Total)) {
-            return '';
-        }
-
-        $sb = new StringBuilder();
-
-        $viewAllText = $this->Resources->GetString('ViewAll');
-        if (!$hideCount) {
-            $sb->Append('<div class="pagination-rows text-center mt-2">');
-            $sb->Append($this->Resources->GetString('Rows'));
-            $sb->Append(": {$pageInfo->ResultsStart} - {$pageInfo->ResultsEnd} ({$pageInfo->Total})");
-            $sb->Append('<span>&nbsp;</span>');
-            if ($pageInfo->TotalPages != 1) {
-                $sb->Append($this->CreatePageLink(['class' => 'link-primary', 'page' => 1, 'size' => -1, 'text' => $viewAllText], $template));
-            }
-            $sb->Append('</div>');
-        }
-        $size = $pageInfo->PageSize;
-        $currentPage = $pageInfo->CurrentPage;
-
-        $sb->Append('<ul class="pagination justify-content-center flex-wrap">');
-        $sb->Append('<li class="page-item">');
-        $sb->Append($this->CreatePageLink(
-            ['page' => max(1, $currentPage - 1), 'size' => $size, 'text' => '&laquo;', 'class' => 'page-link'],
-            $template
-        ));
-        $sb->Append('</li>');
-
-        for ($i = 1; $i <= $pageInfo->TotalPages; $i++) {
-            $isCurrent = ($i == $currentPage);
-            if ($isCurrent) {
-                $sb->Append('<li class="active page-item">');
-            } else {
-                $sb->Append('<li class="page-item">');
-            }
-            $sb->Append($this->CreatePageLink(['page' => $i, 'size' => $size], $template));
-            $sb->Append('</li>');
-        }
-        $sb->Append('<li class="page-item">');
-        $sb->Append($this->CreatePageLink(
-            ['page' => min($pageInfo->TotalPages, $currentPage + 1), 'size' => $size, 'text' => '&raquo;'],
-            $template
-        ));
-        $sb->Append('</li>');
-        $sb->Append('</ul>');
-
-        return $sb->ToString();
-    }
-
-    /**
-     * Create a single pagination link
-     * @param array $params Contains 'page', 'size', optional 'text'
-     * @param Template $template
-     * @return string HTML link
-     */
-    private function CreatePageLink(array $params, Template $template): string
-    {
-        $url = ServiceLocator::GetServer()->GetUrl();
-        $page = $params['page'];
-        $pageSize = $params['size'];
-        $text = isset($params['text']) ? $params['text'] : $page;
-
-        $newUrl = $this->ReplaceQueryString($url, QueryStringKeys::PAGE, $page);
-        $newUrl = $this->ReplaceQueryString($newUrl, QueryStringKeys::PAGE_SIZE, $pageSize);
-
-        $href = htmlspecialchars($newUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $class = isset($params['class']) ? $params['class'] : 'page-link';
-
-        return sprintf('<a class="%s" href="%s" data-page="%s" data-page-size="%s">%s</a>', $class, $href, $page, $pageSize, $text);
     }
 
     /**
@@ -893,24 +803,25 @@ class SmartyPage extends Smarty
         return $uri->withQuery(QueryString::build($pairs, '&', PHP_QUERY_RFC1738))->toString();
     }
 
-    public function CreateJavascriptArray(array $params, Template $template): string
+    public function CreateJavascriptArray($params, $smarty)
     {
-        // Keep the existing string-array contract, including for keyed input arrays.
-        $values = array_map(static fn ($value): string => (string) $value, array_values($params['array']));
+        $array = $params['array'];
 
-        return json_encode(
-            $values,
-            JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR
-        );
+        $string = implode('","', $array);
+
+        return "[\"$string\"]";
     }
 
     /**
      * Pass csv=true to escape the name for a double-quoted CSV field instead of HTML.
      */
-    public function DisplayFullName(array $params, Template $template): string
+    public function DisplayFullName($params, $smarty)
     {
         $config = Configuration::Instance();
-        $ignorePrivacy = filter_var($params['ignorePrivacy'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $ignorePrivacy = false;
+        if (isset($params['ignorePrivacy']) && strtolower($params['ignorePrivacy'] == 'true')) {
+            $ignorePrivacy = true;
+        }
         $csv = filter_var($params['csv'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
         if (
@@ -933,7 +844,7 @@ class SmartyPage extends Smarty
         return htmlspecialchars($fullName->__toString(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', false);
     }
 
-    public function AddQueryString(array $params, Template $template): string
+    public function AddQueryString($params, $smarty)
     {
         $url = new Url(ServiceLocator::GetServer()->GetUrl());
         $name = constant(sprintf('QueryStringKeys::%s', $params['key']));
@@ -942,7 +853,7 @@ class SmartyPage extends Smarty
         return $url->ToString();
     }
 
-    public function GetResourceImage(array $params, Template $template): string
+    public function GetResourceImage($params, $smarty)
     {
         $imageUrl = Configuration::Instance()->GetKey(ConfigKeys::UPLOAD_IMAGE_URL);
 
@@ -953,7 +864,7 @@ class SmartyPage extends Smarty
         return "$imageUrl/{$params['image']}";
     }
 
-    public function EscapeQuotes(mixed $var): string|array
+    public function EscapeQuotes($var)
     {
         $str = str_replace('\'', '&#39;', $var);
         return str_replace('"', '&quot;', $str);
@@ -973,100 +884,100 @@ class SmartyPage extends Smarty
         return RichTextHtmlSanitizer::Sanitize($html);
     }
 
-    public function Flush(array $params, Template $template): void
+    public function Flush($params, $smarty)
     {
         echo '<!-- flushing -->';
         flush();
     }
 
-    public function IncludeJavascriptFile(array $params, Template $template): string
+    public function IncludeJavascriptFile($params, $smarty)
     {
         $versionNumber = Configuration::VERSION;
         $async = isset($params['async']) ? ' async' : '';
-        return "<script type=\"text/javascript\" src=\"{$this->RootPath}scripts/{$params['src']}?v=$versionNumber\"{$async}></script>";
+        echo "<script type=\"text/javascript\" src=\"{$this->RootPath}scripts/{$params['src']}?v=$versionNumber\"{$async}></script>";
     }
 
-    public function IncludeCssFile(array $params, Template $template): string
+    public function IncludeCssFile($params, $smarty)
     {
         $versionNumber = Configuration::VERSION;
         $src = $params['src'];
         if (!BookedStringHelper::Contains($src, '/')) {
             $src = "css/{$src}";
         }
-        return "<link rel='stylesheet' type='text/css' href='{$this->RootPath}{$src}?v=$versionNumber'/>";
+        echo "<link rel='stylesheet' type='text/css' href='{$this->RootPath}{$src}?v=$versionNumber'/>";
     }
 
-    public function IncludeVendorJavascriptFile(array $params, Template $template): string
+    public function IncludeVendorJavascriptFile(array $params, $smarty): void
     {
         $versionNumber = Configuration::VERSION;
         $async = isset($params['async']) ? ' async' : '';
-        return "<script type=\"text/javascript\" src=\"{$this->RootPath}assets/vendor/{$params['src']}?v=$versionNumber\"{$async}></script>";
+        echo "<script type=\"text/javascript\" src=\"{$this->RootPath}assets/vendor/{$params['src']}?v=$versionNumber\"{$async}></script>";
     }
 
-    public function IncludeVendorCssFile(array $params, Template $template): string
+    public function IncludeVendorCssFile(array $params, $smarty): void
     {
         $versionNumber = Configuration::VERSION;
         $src = $params['src'];
-        return "<link rel='stylesheet' type='text/css' href='{$this->RootPath}assets/vendor/{$src}?v=$versionNumber'/>";
+        echo "<link rel='stylesheet' type='text/css' href='{$this->RootPath}assets/vendor/{$src}?v=$versionNumber'/>";
     }
 
-    public function DisplayIndicator(array $params, Template $template): string
+    public function DisplayIndicator($params, $smarty)
     {
         $id = $params['id'] ?? '';
         $size = isset($params['size']) ? "spinner-border-{$params['size']}" : 'spinner-border-sm';
         $show = isset($params['show']) ? '' : 'd-none';
         $class = $params['class'] ?? 'indicator';
 
-        return "<span id=\"$id\" class=\"spinner-border $size $class $show\"></span>";
+        echo "<span id=\"$id\" class=\"spinner-border $size $class $show\"></span>";
     }
 
-    public function ReadOnlyAttribute(array $params, Template $template): string
+    public function ReadOnlyAttribute($params, $smarty)
     {
         $attrVal = $params['value'];
         $attribute = $params['attribute'];
         if ($attribute->Type() == CustomAttributeTypes::CHECKBOX) {
             if ($attrVal == 1) {
-                return Resources::GetInstance()->GetString('Yes');
+                echo Resources::GetInstance()->GetString('Yes');
             } else {
-                return Resources::GetInstance()->GetString('No');
+                echo Resources::GetInstance()->GetString('No');
             }
         } else {
-            return (string) $attrVal;
+            echo $attrVal;
         }
     }
 
-    public function CSRFToken(array $params, Template $template): string
+    public function CSRFToken($params, $smarty)
     {
-        return '<input type="hidden" id="csrf_token" name="' . FormKeys::CSRF_TOKEN . '" value="' .
+        echo '<input type="hidden" id="csrf_token" name="' . FormKeys::CSRF_TOKEN . '" value="' .
             ServiceLocator::GetServer()->GetUserSession()->CSRFToken . '"/>';
     }
 
-    private function GetButtonAttributes(array $params): string
+    private function GetButtonAttributes($params)
     {
         $knownAttributes = ['key', 'class'];
         return $this->AppendAttributes($params, $knownAttributes);
     }
 
-    public function CancelButton(array $params, Template $template): string
+    public function CancelButton($params, $smarty)
     {
         $key = $params['key'] ?? 'Cancel';
         $class = $params['class'] ?? '';
-        return '<button type="button" class="btn btn-outline-secondary btn-sm cancel ' . $class . '" data-bs-dismiss="modal" ' . $this->GetButtonAttributes($params) . '>' .
+        echo '<button type="button" class="btn btn-outline-secondary btn-sm cancel ' . $class . '" data-bs-dismiss="modal" ' . $this->GetButtonAttributes($params) . '>' .
             Resources::GetInstance()->GetString($key) . '</button>';
     }
 
-    public function UpdateButton(array $params, Template $template): string
+    public function UpdateButton($params, $smarty)
     {
         $key = $params['key'] ?? 'Update';
         $class = isset($params['class']) ? ' ' . $params['class'] . ' ' : '';
         $type = isset($params['submit']) ? 'submit' : 'button';
         $save = $type == 'submit' ? '' : ' save ';
 
-        return '<button type="' . $type . '" class="btn btn-primary btn-sm' . $save . $class . '" ' . $this->GetButtonAttributes($params) . '><i class="bi bi-check2-circle"></i> ' . Resources::GetInstance()
+        echo '<button type="' . $type . '" class="btn btn-primary btn-sm' . $save . $class . '" ' . $this->GetButtonAttributes($params) . '><i class="bi bi-check2-circle"></i> ' . Resources::GetInstance()
             ->GetString($key) . '</button>';
     }
 
-    public function AddButton(array $params, Template $template): string
+    public function AddButton($params, $smarty)
     {
         $key = $params['key'] ?? 'Add';
         $class = $params['class'] ?? '';
@@ -1076,11 +987,11 @@ class SmartyPage extends Smarty
             $type = 'submit';
         }
 
-        return '<button type="' . $type . '" class="btn btn-primary btn-sm save ' . $class . '" ' . $this->GetButtonAttributes($params) . '><i class="bi bi-check2-circle"></i> ' . Resources::GetInstance()
+        echo '<button type="' . $type . '" class="btn btn-primary btn-sm save ' . $class . '" ' . $this->GetButtonAttributes($params) . '><i class="bi bi-check2-circle"></i> ' . Resources::GetInstance()
             ->GetString($key) . '</button>';
     }
 
-    public function DeleteButton(array $params, Template $template): string
+    public function DeleteButton($params, $smarty)
     {
         $key = $params['key'] ?? 'Delete';
         $class = $params['class'] ?? '';
@@ -1089,41 +1000,41 @@ class SmartyPage extends Smarty
         if ($submit) {
             $type = 'submit';
         }
-        return '<button type="' . $type . '" class="btn btn-danger btn-sm save ' . $class . '" ' . $this->GetButtonAttributes($params) . '><i class="bi bi-trash3-fill"></i> ' . Resources::GetInstance()
+        echo '<button type="' . $type . '" class="btn btn-danger btn-sm save ' . $class . '" ' . $this->GetButtonAttributes($params) . '><i class="bi bi-trash3-fill"></i> ' . Resources::GetInstance()
             ->GetString($key) . '</button>';
     }
 
-    public function ResetButton(array $params, Template $template): string
+    public function ResetButton($params, $smarty)
     {
         $key = $params['key'] ?? 'Reset';
         $class = $params['class'] ?? '';
-        return '<button type="reset" class="btn btn-outline-secondary btn-sm ' . $class . '" ' . $this->GetButtonAttributes($params) . '><i class="bi bi-arrow-counterclockwise me-1"></i>' . Resources::GetInstance()
+        echo '<button type="reset" class="btn btn-outline-secondary btn-sm ' . $class . '" ' . $this->GetButtonAttributes($params) . '><i class="bi bi-arrow-counterclockwise me-1"></i>' . Resources::GetInstance()
             ->GetString($key) . '</button>';
     }
 
-    public function FilterButton(array $params, Template $template): string
+    public function FilterButton($params, $smarty)
     {
         $key = $params['key'] ?? 'Filter';
         $class = $params['class'] ?? '';
-        return '<button type="submit" class="btn btn-primary btn-sm ' . $class . '" ' . $this->GetButtonAttributes($params) . '><i class="bi bi-search"></i> ' . Resources::GetInstance()
+        echo '<button type="submit" class="btn btn-primary btn-sm ' . $class . '" ' . $this->GetButtonAttributes($params) . '><i class="bi bi-search"></i> ' . Resources::GetInstance()
             ->GetString($key) . '</button>';
     }
 
-    public function OkButton(array $params, Template $template): string
+    public function OkButton($params, $smarty)
     {
         $key = $params['key'] ?? 'OK';
         $class = $params['class'] ?? '';
-        return '<button type="button" class="btn btn-primary btn-sm ' . $class . '" ' . $this->GetButtonAttributes($params) . '><i class="bi bi-check2-circle"></i> ' . Resources::GetInstance()
+        echo '<button type="button" class="btn btn-primary btn-sm ' . $class . '" ' . $this->GetButtonAttributes($params) . '><i class="bi bi-check2-circle"></i> ' . Resources::GetInstance()
             ->GetString($key) . '</button>';
     }
 
-    public function ShowHideIcon(array $params, Template $template): string
+    public function ShowHideIcon($params, $smarty)
     {
         $class = $params['class'] ?? '';
-        return '<a class="link-primary" href="#"><i class="show-hide bi ' . $class . '"></i><span class="visually-hidden">Show/Hide</span></a>';
+        echo '<a class="link-primary" href="#"><i class="show-hide bi ' . $class . '"></i><span class="visually-hidden">Show/Hide</span></a>';
     }
 
-    public function SortColumn(array $params, Template $template): string
+    public function SortColumn($params, $smarty)
     {
         $server = ServiceLocator::GetServer();
         $url = $server->GetRequestUri();
@@ -1158,32 +1069,32 @@ class SmartyPage extends Smarty
             $url = "$url&$sf=$sortField";
         }
 
-        return '<a href="' . $url . '">' . $this->Resources->GetString($params['key']) . ' ' . $indicator . '</a>';
+        echo '<a href="' . $url . '">' . $this->Resources->GetString($params['key']) . ' ' . $indicator . '</a>';
     }
 
-    public function FormatCurrency(array $params, Template $template): string
+    public function FormatCurrency($params, $smarty)
     {
         $amount = isset($params['amount']) && is_numeric($params['amount']) ? floatval($params['amount']) : 0.0;
         $currency = $params['currency'] ?? 'USD';
 
         if (!class_exists('NumberFormatter')) {
             if ($currency == 'USD') {
-                return '$' . number_format($amount, 2) . ' USD';
+                echo '$' . number_format($amount, 2) . ' USD';
             } else {
-                return 'We cannot format this currency. <a href="http://php.net/manual/en/book.intl.php">You must enable internationalization</a>.';
+                echo 'We cannot format this currency. <a href="http://php.net/manual/en/book.intl.php">You must enable internationalization</a>.';
             }
         } else {
             $fmt = new NumberFormatter($this->Resources->CurrentLanguage, NumberFormatter::CURRENCY);
-            return (string) $fmt->formatCurrency($amount, $currency);
+            echo $fmt->formatCurrency($amount, $currency);
         }
     }
 
-    public function LineBreak(array $params, Template $template): string
+    public function LineBreak($params, $smarty)
     {
         return "\n";
     }
 
-    public function UrlEncode(mixed $url): string
+    public function UrlEncode($url)
     {
         return urlencode((string) $url);
     }
@@ -1198,25 +1109,22 @@ class SmartyPage extends Smarty
         return array_key_exists($key ?? '', $array);
     }
 
-    /**
-     * @param COUNT_NORMAL|COUNT_RECURSIVE $mode
-     */
     public function Count(Countable|array $value, int $mode = COUNT_NORMAL): int
     {
         return count($value, $mode);
     }
 
-    public function HtmlEntityDecode(mixed $string): string
+    public function HtmlEntityDecode($string)
     {
         return html_entity_decode((string) $string);
     }
 
-    public function Intval(mixed $string): int
+    public function Intval($string)
     {
         return intval($string);
     }
 
-    public function Strtolower(mixed $string): string
+    public function Strtolower($string)
     {
         return strtolower((string) $string);
     }
