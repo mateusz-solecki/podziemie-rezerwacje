@@ -19,7 +19,7 @@
     <div id="reservation-box" class="mx-3">
         <form id="form-reservation" method="post" enctype="multipart/form-data" role="form">
 
-            <div class="d-flex align-items-center justify-content-between border-bottom my-3 py-2">
+            <div class="d-flex align-items-center justify-content-between border-bottom my-2 py-2">
                 <div class="reservationHeader">
                     <h3 class="mb-0">{block name=reservationHeader}{translate key="CreateReservationHeading"}{/block}
                     </h3>
@@ -46,16 +46,9 @@
             </div>
 
             <div class="row gx-2">
-                <div class="reservationTitle col-12 border-bottom py-2">
-                    <div class="form-group">
-                        <label class="fw-bold mb-0" for="reservationTitle">{translate key="ReservationTitle"}
-                            {if $TitleRequired}
-                            <i class="bi bi-asterisk text-danger align-top text-small"></i>
-                            {/if}
-                        </label>
-                        {textbox name="RESERVATION_TITLE" class="form-control has-feedback" value="ReservationTitle" id="reservationTitle" maxlength="300" required=$TitleRequired}
-                    </div>
-                </div>
+
+                <div id="custom-attributes-placeholder"></div>
+
                 {assign var="detailsCol" value="col-12"}
 
                 {if $ShowParticipation && $AllowParticipation && $ShowReservationDetails}
@@ -118,7 +111,7 @@
                     </div>
                 </div>
 
-                <div class="form-group {$detailsCol} py-2 border-bottom">
+                <div class="form-group {$detailsCol} py-2 border-bottom" style="display:none">
                     {if $ShowParticipation && $AllowParticipation && $ShowReservationDetails}
                     {include file="Reservation/participation.tpl"}
                     {else}
@@ -201,14 +194,22 @@
 
                 </div>
 
+<div class="reservationTitle col-12 border-bottom py-2">
+                    <div class="form-group">
+                        <label class="fw-bold mb-0" for="reservationTitle">{translate key="ReservationTitle"}
+                            {if $TitleRequired}
+                            <i class="bi bi-asterisk text-danger align-top text-small"></i>
+                            {/if}
+                        </label>
+                        {textbox name="RESERVATION_TITLE" class="form-control has-feedback" value="ReservationTitle" id="reservationTitle" maxlength="300" required=$TitleRequired}
+                    </div>
+                </div>
+
+
                 <div class="reservationResources col-12 col-sm-6 py-2 border-bottom" id="reservation-resources">
                     <div class="d-flex align-items-center gap-2">
                         <label class="fw-bold mb-0">{translate key="Resources"}</label>
-                        {if $ShowAdditionalResources}
-                        <a id="btnAddResources" href="#" class="link-primary" data-bs-toggle="modal"
-                            data-bs-target="#dialogResourceGroups">{translate key=Change} <span
-                                class="bi bi-plus-square-fill"></span></a>
-                        {/if}
+
                     </div>
 
                     <div class="d-inline-block">
@@ -231,7 +232,7 @@
                     </div>
                 </div>
 
-                <div class="form-group col-12 col-sm-6 py-2 border-bottom">
+                {*<div class="form-group col-12 col-sm-6 py-2 border-bottom">*}
                     <div class="accessoriesDiv">
                         {if $ShowReservationDetails && $AvailableAccessories|default:array()|count > 0}
                         <div class="d-flex align-items-center gap-2">
@@ -243,15 +244,15 @@
                         <div id="accessories"></div>
                         {/if}
                     </div>
-                </div>
+                {*</div>*}
 
-                <div class="form-group col-12 py-2 border-bottom">
+               {*<div class="form-group col-12 py-2 border-bottom">*}
                     {if $ShowParticipation && $AllowParticipation && $ShowReservationDetails}
                     {include file="Reservation/invitees.tpl"}
                     {else}
                     {include file="Reservation/private-participation.tpl"}
                     {/if}
-                </div>
+                {*</div>*}
 
 
                 {if $RemindersEnabled}
@@ -316,8 +317,6 @@
 
                 </div>
             </div>
-
-            <div id="custom-attributes-placeholder"></div>
 
             {if $UploadsEnabled}
             <div class="border-bottom py-2">
@@ -668,5 +667,176 @@
             });
         }
     </script>
+
+    <script type="text/javascript">
+    var pzUserGroups = {$UserGroupIdsJson|default:'[]'};
+    var pzIsAdmin = {if $PzIsAdmin|default:false}true{else}false{/if};
+</script>
+
+    {literal}
+<script type="text/javascript">
+$(document).ready(function() {
+     // REGUŁY: ID grupy -> '*' (wszystko) albo { selektor atrybutu: [dozwolone wartości] }
+    // '*' z grupy użytkownika znosi ograniczenia pozostałych jego grup.
+    var samodzielny = ['Trening samodzielny'];
+    var ograniczone = {
+        '#psiattribute1': samodzielny,
+        '#psiattribute4': samodzielny
+    };
+
+    var groupRules = {
+        2: '*',          // trenerzy: wszystkie opcje
+        3: ograniczone,  // klienci
+        4: ograniczone   // fizjo
+    };
+
+      function allowedForUser(selector) {
+        var isAdmin = (typeof pzIsAdmin !== 'undefined') && pzIsAdmin;
+        var groups = (typeof pzUserGroups !== 'undefined') ? pzUserGroups : [];
+        if (isAdmin) return null;
+
+        var union = null;
+        for (var i = 0; i < groups.length; i++) {
+            var rules = groupRules[groups[i]];
+            if (rules === '*') return null;          // grupa z pełnym dostępem
+            var rule = rules && rules[selector];
+            if (rule === '*') return null;           // pełny dostęp tylko do tego pola
+            if (rule) union = (union || []).concat(rule);
+        }
+        return union; // null = bez ograniczeń
+    }
+
+    var attributeMap = {
+        '#psiattribute1': {
+            accessory: '#accessory1',
+            mapping: {
+                'TP1': 2, 'TP2': 3, 'TP3': 4,
+                'Trening bokserski': 3,
+                'Trening samodzielny': 1,
+                'Cała sala': 5
+            }
+        },
+        '#psiattribute4': {
+            accessory: '#accessory9',
+            mapping: {
+                'TP1': 2, 'TP2': 3, 'TP3': 4,
+                'Trening bokserski': 3,
+                'Trening samodzielny': 1
+            }
+        }
+    };
+
+    var buttonFields = {
+        '#psiattribute1': attributeMap['#psiattribute1'].mapping,
+        '#psiattribute3': null,
+        '#psiattribute4': attributeMap['#psiattribute4'].mapping
+    };
+
+    function initButtons(selector, allowed) {
+        var $select = $(selector);
+        if (!$select.length || $select.data('converted')) return;
+
+        $select.data('converted', true);
+        $select.hide();
+
+        var groupAllowed = allowedForUser(selector);
+        var $buttonGroup = $('<div class="custom-attr-buttons d-flex flex-wrap gap-2 mt-1"></div>');
+
+        $select.find('option').each(function() {
+            var val = $(this).val();
+            var text = $(this).text();
+
+            if (val === "" || (allowed && allowed[val] === undefined)) return;
+
+            // wartość niedozwolona dla grupy: usuwamy, chyba że jest już wybrana (edycja)
+            if (groupAllowed && groupAllowed.indexOf(val) < 0 && $select.val() !== val) {
+                $(this).remove();
+                return;
+            }
+
+            var isSelected = ($select.val() === val) ? 'active btn-primary' : 'btn-outline-secondary';
+            var $btn = $('<button type="button" class="btn btn-sm ' + isSelected + '"></button>')
+                .attr('data-value', val)
+                .text(text);
+
+            $btn.click(function() {
+                $buttonGroup.find('button').removeClass('active btn-primary').addClass('btn-outline-secondary');
+                $(this).removeClass('btn-outline-secondary').addClass('active btn-primary');
+
+                $select.val(val).get(0).dispatchEvent(new Event('change', { bubbles: true }));
+                $select.trigger('change');
+            });
+
+            $buttonGroup.append($btn);
+        });
+
+        $select.after($buttonGroup);
+    }
+
+    setInterval(function() {
+        $.each(buttonFields, function(selector, allowed) {
+            initButtons(selector, allowed);
+        });
+    }, 200);
+
+    $(document).on('change', '#psiattribute1, #psiattribute4', function() {
+        var selector = '#' + $(this).attr('id');
+        var config = attributeMap[selector];
+        var val = $(this).val();
+
+        if (config && config.mapping[val] !== undefined) {
+            var ilosc = config.mapping[val];
+            var $input = $(config.accessory);
+
+            if ($input.length) {
+                $input.val(ilosc).trigger('input').trigger('change').trigger('blur');
+                setTimeout(function() {
+                    $('#btnConfirmAddAccessories').trigger('click');
+                }, 150);
+            }
+        }
+    });
+
+    $(document).on('change', '#psiattribute3', function() {
+        var wybraneUrzadzenie = $(this).val();
+        var accessoryId = null;
+
+        switch (wybraneUrzadzenie) {
+            case 'Air bike': accessoryId = '5'; break;
+            case 'Bieżnia elektryczna': accessoryId = '7'; break;
+            case 'Bieżnia mechaniczna': accessoryId = '6'; break;
+            case 'Ergometr wioślarski': accessoryId = '8'; break;
+        }
+
+        $('input[id^="accessory"]').filter(':checkbox').prop('checked', false).trigger('change');
+
+        if (accessoryId) {
+            var $checkbox = $('#accessory' + accessoryId);
+            if ($checkbox.length) {
+                $checkbox.prop('checked', true).trigger('input').trigger('change').trigger('blur');
+                setTimeout(function() {
+                    $('#btnConfirmAddAccessories').trigger('click');
+                }, 150);
+            }
+        }
+    });
+
+    var form = document.querySelector('#form-reservation');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            var isAnySelected = false;
+            document.querySelectorAll('.customAttribute').forEach(function(select) {
+                if (select.value && select.value.trim() !== '') isAnySelected = true;
+            });
+            if (!isAnySelected) {
+                e.preventDefault();
+                alert('Musisz wybrać co najmniej jedno sprzęt/akcesorium!');
+                return false;
+            }
+        });
+    }
+});
+</script>
+{/literal}
 
     {include file='globalfooter.tpl'}

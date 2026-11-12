@@ -123,7 +123,7 @@ class pl extends en_gb
         $strings['RepeatUntilPrompt'] = 'Do dnia';
         $strings['RepeatEveryPrompt'] = 'Każdego';
         $strings['RepeatDaysPrompt'] = 'Włączone';
-        $strings['CreateReservationHeading'] = 'Stwórz nową rezerwację';
+        $strings['CreateReservationHeading'] = 'Nowa rezerwacja';
         $strings['EditReservationHeading'] = 'Edytuj rezerwację %s';
         $strings['ViewReservationHeading'] = 'Podgląd rezerwacji %s';
         $strings['ReservationErrors'] = 'Zmień rezerwację';
@@ -841,7 +841,7 @@ class pl extends en_gb
         $strings['MinNoticeError'] = 'Ta rezerwacja wymaga dodatkowej uwagi.  Najwcześniejsza data, która może być zarezerwowana to %s.';
         $strings['MinNoticeErrorUpdate'] = 'Zmiana tej rezerwacji wymaga powiadomienia z wyprzedzeniem.
                                             Rezerwacje zaczynające się przed %s nie mogą być zmienione.';
-        $strings['MinNoticeErrorDelete'] = 'Odwołanie tej rezerwacji wymaga powiadomienia z wyprzedzeniem. 
+        $strings['MinNoticeErrorDelete'] = 'Odwołanie tej rezerwacji wymaga powiadomienia z wyprzedzeniem.
                                             Rezerwacje zaczynające się przed %s nie mogą być odwołane.';
         $strings['MaxNoticeError'] = 'Ta rezerwacja nie może być utworzona w tak odległej przyszłości.  Najdalszą datą jest %s.';
         $strings['MinDurationError'] = 'Ta rezerwacja musi trwać co najmniej %s.';

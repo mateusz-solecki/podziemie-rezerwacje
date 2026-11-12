@@ -88,6 +88,7 @@ class SmartyControlTest extends TestBase
     {
         $expectedName = $this->_expectedName;
         $expectedValue = $expectedValue ?? $this->_expectedValue;
+        $expectedStyle = $this->_expectedStyle;
         return "<input type=\"$type\" name=\"$expectedName\" id=\"{$this->_id}\" value=\"$expectedValue\" style=\"font-size:12px;\" class=\"something\" />";
     }
 }
