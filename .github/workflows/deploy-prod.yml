@@ -1,4 +1,4 @@
-name: Deploy to FTP
+name: Deploy to prod FTP
 
 on:
   push:
@@ -15,7 +15,7 @@ jobs:
       - name: Get code
         uses: actions/checkout@v4
 
-      - name: Upload to Hostido via FTPS
+      - name: Upload to prod via FTPS
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
