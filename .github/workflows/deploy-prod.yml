@@ -6,7 +6,7 @@ on:
       - prod
 
   workflow_dispatch:
-    
+
 jobs:
   web-deploy:
     name: Deploy
@@ -23,6 +23,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftp
+          server-dir: /public_html/rezerwacje/
           dangerous-allow-insecure-ssl: true
           # Dodaj te opcje, aby zapobiec rozłączaniu socketu
           timeout: 60000
