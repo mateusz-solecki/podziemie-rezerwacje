@@ -5,7 +5,7 @@ on:
     branches:
       - prod
 
-    workflow_dispatch:
+  workflow_dispatch:
     
 jobs:
   web-deploy:
